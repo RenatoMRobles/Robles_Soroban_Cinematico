@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Soroban Cinemático - Robles y Robles</title>
+    <title>Soroban Cinemático - Prueba Física</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
@@ -10,199 +10,42 @@
             color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; overflow: hidden;
         }
-        h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #00E676; margin-bottom: 5px; }
+        h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #FF4081; margin-bottom: 5px; }
+        p.sub { color: #888; margin-top: 0; font-size: 0.9em; letter-spacing: 1px;}
         
-        #marcador {
-            font-size: 3.5em; font-weight: bold; color: #FFD700; 
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); margin-bottom: 10px;
-            font-family: 'Courier New', Courier, monospace; letter-spacing: 5px;
-        }
-
-        .layout-principal { display: flex; gap: 30px; align-items: flex-start; margin-top: 10px; }
-
-        /* --- SOROBAN --- */
-        #escenario-wrapper { display: flex; flex-direction: column; align-items: center; }
         .panel-control {
             display: flex; gap: 15px; margin-bottom: 15px; z-index: 20;
             background: #1A1A1A; padding: 12px 20px; border-radius: 12px;
             border: 1px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
-        .columna-btns { display: flex; flex-direction: column; gap: 5px; align-items: center;}
-        .titulo-col { font-size: 0.75em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
-        .fila-btns { display: flex; gap: 5px; }
-        
         button {
-            background-color: #121212; border: 1px solid; padding: 6px 10px;
-            border-radius: 6px; cursor: pointer; transition: all 0.2s ease; font-weight: bold; font-size: 0.9em;
+            background-color: #121212; border: 1px solid; padding: 8px 15px;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s ease; font-weight: bold; font-size: 1em;
         }
         .btn-u { color: #00E676; border-color: #00E676; } .btn-u:hover { background-color: #00E676; color: #121212; }
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
-        .btn-c { color: #FFD700; border-color: #FFD700; } .btn-c:hover { background-color: #FFD700; color: #121212; }
-        .btn-sub { color: #FF5252; border-color: #FF5252; opacity: 0.8;} .btn-sub:hover { background-color: #FF5252; color: #121212; opacity: 1;}
-        .btn-reset { color: #BDBDBD; border-color: #BDBDBD; height: 100%; align-self: center; padding: 10px 15px;} .btn-reset:hover { background-color: #BDBDBD; color: #121212; }
+        .btn-reset { color: #FF5252; border-color: #FF5252; } .btn-reset:hover { background-color: #FF5252; color: #121212; }
 
-        #escenario { position: relative; width: 750px; height: 450px; }
         #canvas-container {
-            width: 100%; height: 100%; border: 1px solid #333;
-            box-shadow: 0 0 25px rgba(0, 230, 118, 0.15); border-radius: 10px; background-color: transparent;
+            width: 900px; height: 700px; border: 1px solid #333;
+            box-shadow: 0 0 30px rgba(255, 64, 129, 0.15); border-radius: 10px; background-color: transparent;
         }
-
-        .iman-visual {
-            position: absolute; top: -10px; width: 70px; height: 35px;
-            background: #222; border: 2px solid #444; border-radius: 8px 8px 20px 20px;
-            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.8); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 10; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px;
-        }
-        .iman-visual::after {
-            content: ''; width: 50px; height: 10px;
-            background: repeating-linear-gradient(90deg, #FF5252, #FF5252 10px, #2979FF 10px, #2979FF 20px);
-            border-radius: 5px; opacity: 0.2; transition: opacity 0.3s ease;
-        }
-        .iman-visual.activo { top: 20px; box-shadow: 0 25px 50px rgba(0, 230, 118, 0.6), inset 0 -5px 10px rgba(0,0,0,0.8); border-color: #00E676; }
-        .iman-visual.activo::after { opacity: 1; box-shadow: 0 0 15px #00E676; }
-
-        #iman-C { left: 115px; } #iman-D { left: 340px; } #iman-U { left: 565px; }
-
-        /* --- CALCULADORA --- */
-        #calculadora {
-            background: #1A1A1A; border: 1px solid #333; border-radius: 12px;
-            padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            width: 260px; display: flex; flex-direction: column; gap: 15px;
-        }
-        #calc-display {
-            background: #0A0A0A; border: 1px solid #444; border-radius: 8px;
-            height: 60px; display: flex; align-items: center; justify-content: flex-end;
-            padding: 0 15px; font-size: 2.5em; font-family: 'Courier New', Courier, monospace;
-            color: #00E676; /* Verde digital */ overflow: hidden; transition: color 0.3s ease;
-        }
-        #calc-display.modo-total { color: #FFD700; /* Amarillo cuando muestra el total del Soroban */ }
-        
-        .calc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .btn-calc {
-            background: #2A2A2A; border: 1px solid #444; border-radius: 8px;
-            padding: 15px 0; font-size: 1.5em; color: #FFF; cursor: pointer; transition: 0.2s;
-        }
-        .btn-calc:hover { background: #3A3A3A; border-color: #666; }
-        .btn-calc-op { font-weight: bold; }
-        .btn-suma { color: #00E676; border-color: #00E676; } .btn-suma:hover { background: #00E676; color: #121212; }
-        .btn-resta { color: #FF5252; border-color: #FF5252; } .btn-resta:hover { background: #FF5252; color: #121212; }
-        .btn-clear { color: #BDBDBD; border-color: #BDBDBD; } .btn-clear:hover { background: #BDBDBD; color: #121212; }
-        .btn-back { color: #FF9800; border-color: #FF9800; } .btn-back:hover { background: #FF9800; color: #121212; }
-        .col-span-2 { grid-column: span 2; }
     </style>
 </head>
 <body>
-    <h1>SOROBAN CINEMÁTICO</h1>
-    <div id="marcador">000</div> 
+    <h1>MODO EXPERIMENTAL: RUBE GOLDBERG</h1>
+    <p class="sub">Computación Física Pura por Robles y Robles</p>
     
-    <div class="layout-principal">
-        
-        <div id="escenario-wrapper">
-            <div class="panel-control">
-                <div class="columna-btns">
-                    <span class="titulo-col">Centenas</span>
-                    <div class="fila-btns"><button class="btn-c" onclick="operarColumna('C', 1)">+100</button><button class="btn-c" onclick="operarColumna('C', 5)">+500</button></div>
-                    <div class="fila-btns"><button class="btn-sub" onclick="operarColumna('C', -1)">-100</button><button class="btn-sub" onclick="operarColumna('C', -5)">-500</button></div>
-                </div>
-                <div class="columna-btns">
-                    <span class="titulo-col">Decenas</span>
-                    <div class="fila-btns"><button class="btn-d" onclick="operarColumna('D', 1)">+10</button><button class="btn-d" onclick="operarColumna('D', 5)">+50</button></div>
-                    <div class="fila-btns"><button class="btn-sub" onclick="operarColumna('D', -1)">-10</button><button class="btn-sub" onclick="operarColumna('D', -5)">-50</button></div>
-                </div>
-                <div class="columna-btns">
-                    <span class="titulo-col">Unidades</span>
-                    <div class="fila-btns"><button class="btn-u" onclick="operarColumna('U', 1)">+1</button><button class="btn-u" onclick="operarColumna('U', 5)">+5</button></div>
-                    <div class="fila-btns"><button class="btn-sub" onclick="operarColumna('U', -1)">-1</button><button class="btn-sub" onclick="operarColumna('U', -5)">-5</button></div>
-                </div>
-                <button class="btn-reset" onclick="limpiarSoroban()">RESET</button>
-            </div>
-
-            <div id="escenario">
-                <div id="iman-C" class="iman-visual"></div>
-                <div id="iman-D" class="iman-visual"></div>
-                <div id="iman-U" class="iman-visual"></div>
-                <div id="canvas-container"></div>
-            </div>
-        </div>
-
-        <div id="calculadora">
-            <div id="calc-display" class="modo-total">0</div>
-            <div class="calc-grid">
-                <button class="btn-calc" onclick="inputCalc(7)">7</button>
-                <button class="btn-calc" onclick="inputCalc(8)">8</button>
-                <button class="btn-calc" onclick="inputCalc(9)">9</button>
-                
-                <button class="btn-calc" onclick="inputCalc(4)">4</button>
-                <button class="btn-calc" onclick="inputCalc(5)">5</button>
-                <button class="btn-calc" onclick="inputCalc(6)">6</button>
-                
-                <button class="btn-calc" onclick="inputCalc(1)">1</button>
-                <button class="btn-calc" onclick="inputCalc(2)">2</button>
-                <button class="btn-calc" onclick="inputCalc(3)">3</button>
-                
-                <button class="btn-calc btn-clear" onclick="clearCalc()">C</button>
-                <button class="btn-calc" onclick="inputCalc(0)">0</button>
-                <button class="btn-calc btn-back" onclick="backspaceCalc()">⌫</button>
-                
-                <button class="btn-calc btn-calc-op btn-suma col-span-2" onclick="ejecutarCalc('SUMA')">+</button>
-                <button class="btn-calc btn-calc-op btn-resta" onclick="ejecutarCalc('RESTA')">-</button>
-            </div>
-        </div>
-
+    <div class="panel-control">
+        <button class="btn-u" onclick="inyectarCanicas(1)">Inyectar +1 Micro-Canica</button>
+        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Torrente)</button>
+        <button class="btn-reset" onclick="limpiarMundo()">Purgar Sistema</button>
     </div>
 
+    <div id="canvas-container"></div>
+
     <script>
-        // --- MEMORIA GLOBAL ---
-        let valorTotal = 0;
-
-        // --- LÓGICA DE LA CALCULADORA INTELIGENTE ---
-        let calcBuffer = "";
-        let calcModoInput = false; // Indica si el usuario está tecleando un número nuevo
-        
-        function actualizarDisplayCalc() {
-            const display = document.getElementById('calc-display');
-            if (calcModoInput) {
-                display.innerText = calcBuffer === "" ? "0" : calcBuffer;
-                display.classList.remove('modo-total');
-            } else {
-                display.innerText = valorTotal.toString();
-                display.classList.add('modo-total');
-            }
-        }
-
-        function inputCalc(num) {
-            calcModoInput = true;
-            if (calcBuffer.length >= 3) return; // Soroban maneja hasta 999
-            calcBuffer += num.toString();
-            actualizarDisplayCalc();
-        }
-
-        function backspaceCalc() {
-            if (!calcModoInput) return;
-            calcBuffer = calcBuffer.slice(0, -1);
-            if (calcBuffer === "") calcModoInput = false; // Vuelve a mostrar el total
-            actualizarDisplayCalc();
-        }
-
-        function clearCalc() {
-            calcBuffer = "";
-            calcModoInput = false;
-            actualizarDisplayCalc();
-        }
-
-        function ejecutarCalc(operacion) {
-            if (!calcModoInput || calcBuffer === "") return;
-            let cantidad = parseInt(calcBuffer);
-            
-            let delta = operacion === 'SUMA' ? cantidad : -cantidad;
-            procesarCambioGlobal(valorTotal + delta);
-            
-            calcBuffer = "";
-            calcModoInput = false;
-            actualizarDisplayCalc(); 
-        }
-
-        // --- AUDIO CORPORATIVO ---
+        // --- AUDIO ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -210,178 +53,153 @@
             const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
             let ahora = audioCtx.currentTime;
-            if (tipo === 'add') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.1);
-                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.1);
-                osc.start(ahora); osc.stop(ahora + 0.1);
-            } else if (tipo === 'sub') {
-                osc.type = 'square'; osc.frequency.setValueAtTime(200, ahora); osc.frequency.exponentialRampToValueAtTime(800, ahora + 0.3);
-                gainNode.gain.setValueAtTime(0.05, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.3);
-                osc.start(ahora); osc.stop(ahora + 0.3);
-            } else if (tipo === 'magia') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, ahora); osc.frequency.setValueAtTime(1200, ahora + 0.1); osc.frequency.setValueAtTime(1600, ahora + 0.2);
-                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.3);
-                osc.start(ahora); osc.stop(ahora + 0.3);
+            
+            if (tipo === 'drop') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.05);
+                gainNode.gain.setValueAtTime(0.05, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.05);
+                osc.start(ahora); osc.stop(ahora + 0.05);
+            } else if (tipo === 'alarma') {
+                // Sonido de compuerta abriéndose
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, ahora); osc.frequency.linearRampToValueAtTime(150, ahora + 0.4);
+                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.4);
+                osc.start(ahora); osc.stop(ahora + 0.4);
             }
         }
 
         // --- MOTOR FÍSICO ---
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
-              Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, Composite = Matter.Composite;
+              Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, 
+              Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        
-        // Mejoramos la precisión cuántica del motor para evitar fallas
-        engine.positionIterations = 8; 
-        engine.velocityIterations = 8;
+        engine.positionIterations = 8; engine.velocityIterations = 8; // Máxima precisión
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
-            options: { width: 750, height: 450, wireframes: false, background: 'transparent' }
+            options: { width: 900, height: 700, wireframes: false, background: 'transparent' }
         });
 
-        const opPared = { render: { fillStyle: '#333' } };
+        // --- ARQUITECTURA EN ESCALERA ---
+        const opPared = { render: { fillStyle: '#444' } };
+        let columnasData = {}; // Guardaremos referencias para abrir las compuertas
 
-        // 🛡️ SOLUCIÓN PURISTA: Embudos Invisibles anclados al mundo, NO al contenedor.
-        function crearColumna(x) {
-            // 1. El contenedor dinámico (Centro de gravedad perfecto)
-            const base = Bodies.rectangle(x, 340, 140, 30, opPared); 
-            const izq = Bodies.rectangle(x - 60, 240, 20, 230, opPared); 
-            const der = Bodies.rectangle(x + 60, 240, 20, 230, opPared);
-            const contenedor = Body.create({ parts: [base, izq, der], friction: 0.8, mass: 10, inertia: Infinity });
+        // Función constructora del Contenedor Mecánico
+        function crearColumna(id, x, y, stiffness, colorBase) {
+            // 1. Base inclinada hacia la IZQUIERDA para que las canicas rueden a la compuerta
+            const base = Bodies.rectangle(x, y, 100, 15, { angle: -0.15, render: { fillStyle: '#333' } });
+            const paredDer = Bodies.rectangle(x + 45, y - 60, 15, 140, opPared);
+            const paredIzqSup = Bodies.rectangle(x - 45, y - 90, 15, 80, opPared); // Deja un hueco abajo
+
+            const contenedor = Body.create({ parts: [base, paredDer, paredIzqSup], friction: 0.1, mass: 15, inertia: Infinity });
+            contenedor.label = 'contenedor_' + id;
+
+            // 2. Resorte calibrado
+            const ancla = Bodies.circle(x, y - 180, 10, { isStatic: true, render: { visible: false } });
+            const resorte = Constraint.create({ bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -60 }, stiffness: stiffness, damping: 0.1, length: 120 });
+
+            // 3. La Compuerta (Cuerpo independiente atado con bisagras)
+            const puerta = Bodies.rectangle(x - 45, y - 25, 15, 50, { render: { fillStyle: colorBase } });
             
-            // 2. Resorte de Gravedad
-            const ancla = Bodies.circle(x, 20, 10, { isStatic: true, render: { visible: false } });
-            const resorte = Constraint.create({
-                bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -90 }, 
-                stiffness: 0.007, damping: 0.1, length: 150      
-            });
+            // Bisagra superior (eje de rotación)
+            const bisagra = Constraint.create({ bodyA: contenedor, pointA: { x: -45, y: -50 }, bodyB: puerta, pointB: { x: 0, y: -25 }, stiffness: 1, length: 0, render: { visible: false } });
+            // Cerrojo inferior (mantiene cerrada la puerta)
+            const cerrojo = Constraint.create({ bodyA: contenedor, pointA: { x: -45, y: 0 }, bodyB: puerta, pointB: { x: 0, y: 25 }, stiffness: 1, length: 0, render: { visible: false } });
 
-            // 3. Embudos Inquebrantables Estáticos (Evitan que caigan al vacío, sin hundir la caja)
-            const embudoIzq = Bodies.rectangle(x - 60, 40, 20, 180, { isStatic: true, render: { visible: false } });
-            const embudoDer = Bodies.rectangle(x + 60, 40, 20, 180, { isStatic: true, render: { visible: false } });
+            // 4. El Botón Sensor de Presión (Debajo del contenedor)
+            const boton = Bodies.rectangle(x, y + 60, 60, 15, { isStatic: true, isSensor: true, render: { fillStyle: '#222' } });
+            boton.label = 'boton_' + id;
 
-            Composite.add(engine.world, [contenedor, ancla, resorte, embudoIzq, embudoDer]);
+            Composite.add(engine.world, [contenedor, ancla, resorte, puerta, bisagra, cerrojo, boton]);
+
+            // Guardar en el diccionario para controlarlo después
+            columnasData[id] = { id, contenedor, puerta, cerrojo, boton, color: colorBase, abierta: false };
         }
 
-        crearColumna(150); crearColumna(375); crearColumna(600); 
+        // --- INSTANCIAR ESCENARIO ---
+        // Unidades (Arriba Derecha) - Resorte muy suave (se acciona con 10 canicas)
+        crearColumna('U', 750, 200, 0.005, '#00E676');
+        
+        // Decenas (Medio Centro) - Resorte más tenso (se acciona con 100 canicas)
+        crearColumna('D', 450, 400, 0.05, '#2979FF');
+        
+        // Centenas (Abajo Izquierda) - Contenedor final estático (o muy duro)
+        crearColumna('C', 150, 600, 0.5, '#FFD700');
 
-        // --- ESTADO FÍSICO DIFERENCIAL ---
-        let estadoFisico = { C: {v5: 0, v1: 0}, D: {v5: 0, v1: 0}, U: {v5: 0, v1: 0} };
-        let canicasCuerpos = []; 
+        // --- RAMPAS DE CASCADA ---
+        // Rampa de Unidades -> Decenas
+        Composite.add(engine.world, Bodies.rectangle(600, 260, 300, 15, { isStatic: true, angle: 0.35, render: { fillStyle: '#555' } }));
+        // Rampa de Decenas -> Centenas
+        Composite.add(engine.world, Bodies.rectangle(300, 460, 300, 15, { isStatic: true, angle: 0.35, render: { fillStyle: '#555' } }));
 
-        function actualizarMarcador() {
-            document.getElementById('marcador').innerText = valorTotal.toString().padStart(3, '0');
-            actualizarDisplayCalc(); // Sincronizamos la calculadora
+        let canicas = [];
+
+        function inyectarCanicas(cantidad) {
+            let inyectadas = 0;
+            // Torrente en cascada: instanciamos una cada 80ms para no saturar el colisionador
+            let intervalo = setInterval(() => {
+                reproducirSonido('drop');
+                // Aparecen justo sobre el contenedor de Unidades con un micro offset aleatorio
+                let nuevaCanica = Bodies.circle(750 + (Math.random() * 20 - 10), 0, 5, { // RADIO = 5 (10 veces más pequeñas!)
+                    restitution: 0.4, mass: 1, friction: 0.005, render: { fillStyle: '#00E676' }
+                });
+                canicas.push(nuevaCanica);
+                Composite.add(engine.world, nuevaCanica);
+                inyectadas++;
+                if (inyectadas >= cantidad) clearInterval(intervalo);
+            }, 80);
         }
 
-        function animarImanVisual(columna) {
-            let ids = columna === 'ALL' ? ['iman-C', 'iman-D', 'iman-U'] : ['iman-' + columna];
-            ids.forEach(id => {
-                let el = document.getElementById(id);
-                if(el) { el.classList.add('activo'); setTimeout(() => el.classList.remove('activo'), 500); }
-            });
+        function limpiarMundo() {
+            canicas.forEach(c => Composite.remove(engine.world, c));
+            canicas = [];
         }
 
-        function limpiarSoroban() {
-            if (valorTotal === 0) return;
-            reproducirSonido('sub'); animarImanVisual('ALL');
-            canicasCuerpos.forEach(c => {
-                Matter.Body.applyForce(c, c.position, { x: 0, y: -0.09 * c.mass });
-                setTimeout(() => Composite.remove(engine.world, c), 500);
-            });
-            canicasCuerpos = [];
-            estadoFisico = { C: {v5:0, v1:0}, D: {v5:0, v1:0}, U: {v5:0, v1:0} };
-            valorTotal = 0; 
-            clearCalc(); // Resetea también la calculadora
+        // --- LÓGICA MECÁNICA DE COMPUERTAS ---
+        function abrirCompuerta(col) {
+            if (col.abierta) return;
+            col.abierta = true;
+            reproducirSonido('alarma');
+
+            // 1. Iluminar botón como si se encendiera
+            col.boton.render.fillStyle = col.color;
+            col.boton.render.strokeStyle = '#FFF';
+            col.boton.render.lineWidth = 3;
+
+            // 2. Destruir el cerrojo (la compuerta cede a la presión y las canicas caen)
+            Composite.remove(engine.world, col.cerrojo);
+
+            // 3. Temporizador neumático para volver a cerrar la compuerta
+            setTimeout(() => {
+                // Regresar la puerta a su posición y ángulo cerrados usando cinemática
+                Body.setAngle(col.puerta, col.contenedor.angle);
+                Body.setPosition(col.puerta, { x: col.contenedor.position.x - 45, y: col.contenedor.position.y - 25 });
+                
+                // Re-soldar el cerrojo
+                Composite.add(engine.world, col.cerrojo);
+                
+                // Apagar el botón
+                col.boton.render.fillStyle = '#222';
+                col.boton.render.lineWidth = 0;
+                col.abierta = false;
+            }, 3500); // 3.5 segundos para asegurar que todas salgan
         }
 
-        function crearCanicaFisica(columna, valorMag, offsetY = 0) {
-            let x = columna === 'U' ? 600 : (columna === 'D' ? 375 : 150);
-            x = x + (Math.random() * 4 - 2); 
-            
-            let radio = valorMag === 1 ? 15 : 30;
-            let masa = valorMag === 1 ? 2 : 10;
-            let color = '#FFF';
-            if (columna === 'U') color = valorMag === 1 ? '#00E676' : '#FF4081'; 
-            if (columna === 'D') color = valorMag === 1 ? '#2979FF' : '#B388FF'; 
-            if (columna === 'C') color = valorMag === 1 ? '#FFD700' : '#FF6D00'; 
+        // --- SENSORES DE COLISIÓN (EL CEREBRO DEL RUBE GOLDBERG) ---
+        Events.on(engine, 'collisionStart', function(event) {
+            event.pairs.forEach(pair => {
+                let a = pair.bodyA.label;
+                let b = pair.bodyB.label;
 
-            // Aparecen dentro del embudo estático seguro
-            let nuevaCanica = Bodies.circle(x, 20 - offsetY, radio, { 
-                restitution: 0.2, mass: masa, frictionAir: 0.015, render: { fillStyle: color } 
-            });
-            nuevaCanica.customType = columna + valorMag;
-            canicasCuerpos.push(nuevaCanica); 
-            Composite.add(engine.world, nuevaCanica);
-        }
-
-        function procesarDelta(columna, valorFicha, diferencia) {
-            if (diferencia === 0) return; 
-            let typeStr = columna + valorFicha; 
-
-            if (diferencia > 0) {
-                let dropOffset = 0;
-                for(let i=0; i < diferencia; i++) {
-                    crearCanicaFisica(columna, valorFicha, dropOffset);
-                    dropOffset += 50; 
+                // Detectar si el Contenedor de Unidades toca su Botón
+                if ((a === 'contenedor_U' && b === 'boton_U') || (b === 'contenedor_U' && a === 'boton_U')) {
+                    abrirCompuerta(columnasData['U']);
                 }
-            } else if (diferencia < 0) {
-                let cantidadARemover = Math.abs(diferencia);
-                let removidas = 0;
-                animarImanVisual(columna);
-                for (let i = canicasCuerpos.length - 1; i >= 0; i--) {
-                    let c = canicasCuerpos[i];
-                    if (c.customType === typeStr) {
-                        Matter.Body.applyForce(c, c.position, { x: 0, y: -0.09 * c.mass });
-                        canicasCuerpos.splice(i, 1);
-                        setTimeout(() => Composite.remove(engine.world, c), 500);
-                        removidas++;
-                        if (removidas === cantidadARemover) break;
-                    }
+                // Detectar si el Contenedor de Decenas toca su Botón
+                if ((a === 'contenedor_D' && b === 'boton_D') || (b === 'contenedor_D' && a === 'boton_D')) {
+                    abrirCompuerta(columnasData['D']);
                 }
-            }
-        }
-
-        function procesarCambioGlobal(totalProyectado) {
-            if (totalProyectado < 0) totalProyectado = 0; 
-            if (totalProyectado > 999) totalProyectado = 999;
-            if (totalProyectado === valorTotal) return; 
-
-            let esSuma = totalProyectado > valorTotal;
-            reproducirSonido(esSuma ? 'add' : 'sub');
-            
-            let saltoC = Math.floor(totalProyectado/100) > Math.floor(valorTotal/100);
-            let saltoD = Math.floor((totalProyectado%100)/10) > Math.floor((valorTotal%100)/10);
-            if (saltoC || saltoD) setTimeout(() => reproducirSonido('magia'), 200);
-
-            valorTotal = totalProyectado;
-            actualizarMarcador();
-
-            let nC = Math.floor(valorTotal / 100);
-            let nD = Math.floor((valorTotal % 100) / 10);
-            let nU = valorTotal % 10;
-
-            let nuevoEstadoFisico = {
-                C: { v5: Math.floor(nC / 5), v1: nC % 5 },
-                D: { v5: Math.floor(nD / 5), v1: nD % 5 },
-                U: { v5: Math.floor(nU / 5), v1: nU % 5 }
-            };
-
-            procesarDelta('C', 5, nuevoEstadoFisico.C.v5 - estadoFisico.C.v5);
-            procesarDelta('C', 1, nuevoEstadoFisico.C.v1 - estadoFisico.C.v1);
-            procesarDelta('D', 5, nuevoEstadoFisico.D.v5 - estadoFisico.D.v5);
-            procesarDelta('D', 1, nuevoEstadoFisico.D.v1 - estadoFisico.D.v1);
-            procesarDelta('U', 5, nuevoEstadoFisico.U.v5 - estadoFisico.U.v5);
-            procesarDelta('U', 1, nuevoEstadoFisico.U.v1 - estadoFisico.U.v1);
-
-            estadoFisico = nuevoEstadoFisico;
-        }
-
-        function operarColumna(columna, valorPresionado) {
-            let mult = columna === 'C' ? 100 : (columna === 'D' ? 10 : 1);
-            procesarCambioGlobal(valorTotal + (valorPresionado * mult));
-        }
+            });
+        });
 
         Render.run(render);
         const runner = Runner.create(); Runner.run(runner, engine);
