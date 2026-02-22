@@ -27,21 +27,22 @@
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
         .btn-reset { color: #FF5252; border-color: #FF5252; } .btn-reset:hover { background-color: #FF5252; color: #121212; }
 
-        #escenario-wrapper { position: relative; width: 950px; height: 950px; }
+        /* Lienzo expandido a 1050px para permitir rampas más inclinadas */
+        #escenario-wrapper { position: relative; width: 950px; height: 1050px; }
         #canvas-container {
             width: 100%; height: 100%; border: 1px solid #222;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; background-color: transparent;
         }
 
-        /* Displays Digitales LED */
+        /* Displays Digitales LED - Coordenadas adaptadas al nuevo terreno */
         .display-led {
             position: absolute; background: #000; border: 2px solid #333; border-radius: 5px;
             font-family: 'Courier New', Courier, monospace; font-size: 1.5em; font-weight: bold; 
             text-align: center; width: 60px; padding: 2px 0; z-index: 10;
         }
-        #led-U { left: 790px; top: 70px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
-        #led-D { left: 470px; top: 450px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
-        #led-C { left: 150px; top: 850px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
+        #led-U { left: 790px; top: 120px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
+        #led-D { left: 450px; top: 550px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
+        #led-C { left: 130px; top: 970px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
         
         /* Indicadores de Servomotor */
         .servo-status {
@@ -50,13 +51,13 @@
         }
         .servo-activo { background: #00E676; box-shadow: 0 0 20px #00E676; } 
         
-        #servo-U { left: 885px; top: 100px; } 
-        #servo-D { left: 575px; top: 500px; }
+        #servo-U { left: 885px; top: 150px; } 
+        #servo-D { left: 555px; top: 600px; }
     </style>
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Blindaje Anti-Túnel Cuántico y Acústica de Cristal</p>
+    <p class="sub">Matriz de Colisiones y Rampas de Alta Velocidad</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanica(1)">+1 (Micro)</button>
@@ -121,26 +122,40 @@
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 16; engine.velocityIterations = 16; // Máxima fidelidad de colisión
+        engine.positionIterations = 16; engine.velocityIterations = 16;
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
-            options: { width: 950, height: 950, wireframes: false, background: 'transparent' }
+            options: { width: 950, height: 1050, wireframes: false, background: 'transparent' }
         });
 
-        // --- 📐 FUNCIONES GEOMÉTRICAS REFORZADAS ---
-        const opPared = { isStatic: true, render: { fillStyle: '#444' } };
+        // 🛡️ MATRIZ DE FILTROS DE COLISIÓN (El secreto para evitar dislocaciones)
+        const CAT_MURO = 0x0001;
+        const CAT_PUERTA = 0x0002;
+        const CAT_CANICA = 0x0004;
+
+        const opPared = { 
+            isStatic: true, 
+            render: { fillStyle: '#444' },
+            collisionFilter: { category: CAT_MURO } // Las paredes son categoría Muro
+        };
         let modulos = {}; 
 
-        // 🛡️ RAMPAS REFORZADAS (Grosor 20px)
+        // 🚀 RAMPAS DE ALTA VELOCIDAD
         function crearRampa(x1, y1, x2, y2) {
             let cx = (x1 + x2) / 2; let cy = (y1 + y2) / 2;
             let longitud = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
             let angulo = Math.atan2(y2 - y1, x2 - x1);
-            let rampa = Bodies.rectangle(cx, cy, longitud, 20, { isStatic: true, angle: angulo, render: { fillStyle: '#555' } });
+            let rampa = Bodies.rectangle(cx, cy, longitud, 20, { 
+                isStatic: true, angle: angulo, render: { fillStyle: '#555' },
+                collisionFilter: { category: CAT_MURO } 
+            });
             
-            // Tope de seguridad
-            let tope = Bodies.rectangle(x1 + 10, y1 - 40, 15, 80, { isStatic: true, render: { fillStyle: '#444' } });
+            // Tope trasero extra alto para evitar que reboten hacia atrás
+            let tope = Bodies.rectangle(x1 + 10, y1 - 50, 20, 120, { 
+                isStatic: true, render: { fillStyle: '#444' },
+                collisionFilter: { category: CAT_MURO }
+            });
             
             Composite.add(engine.world, [rampa, tope]);
         }
@@ -148,21 +163,31 @@
         function crearContenedor(id, x, y, width, height, limit, colorBase) {
             const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
             
+            // Pared derecha asimétrica (abierta arriba)
             const alturaDer = height * 0.4;
             const paredDer = Bodies.rectangle(x + width/2, y + (height - alturaDer)/2, 15, alturaDer, opPared);
             
-            // Guía de entrada
-            const guiaIzq = Bodies.rectangle(x - width/2 - 10, y - height/2 - 40, 70, 15, { isStatic: true, angle: Math.PI/2.5, render: { fillStyle: '#444' } });
+            // Guía tipo tablero de básquetbol
+            const guiaIzq = Bodies.rectangle(x - width/2 - 10, y - height/2 - 40, 70, 15, { 
+                isStatic: true, angle: Math.PI/2.5, render: { fillStyle: '#444' },
+                collisionFilter: { category: CAT_MURO }
+            });
 
             const sensorLaser = Bodies.rectangle(x, y - height/2 + 20, width - 15, 10, { 
                 isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            // 🛡️ ESCOTILLA REFORZADA (Grosor 20px) para aniquilar el túnel cuántico
-            const escotilla = Bodies.rectangle(x, y + height/2, width + 15, 20, { isStatic: true, render: { fillStyle: colorBase } });
+            // 🛡️ ESCOTILLA INMUNE A LA PARED: 
+            // Pertenece a categoría Puerta, y su "mask" le dice que SOLO choque con Canicas, ignorando los Muros.
+            const escotilla = Bodies.rectangle(x, y + height/2, width + 15, 20, { 
+                isStatic: true, render: { fillStyle: colorBase },
+                collisionFilter: { category: CAT_PUERTA, mask: CAT_CANICA } // MAGIA ANTI-DISLOCACIÓN ✨
+            });
             
             const bisagra = Constraint.create({
-                pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 5, y: 0 }, 
+                pointA: { x: x + width/2 - 5, y: y + height/2 }, 
+                bodyB: escotilla, 
+                pointB: { x: width/2 - 5, y: 0 }, 
                 stiffness: 1, length: 0, render: { visible: false }
             });
 
@@ -170,30 +195,34 @@
             modulos[id] = { id, escotilla, limite: limit, conteoActual: 0, abierta: false, origX: x, origY: y + height/2 };
         }
 
-        // 📐 TOPOGRAFÍA PERFECTA
-        crearContenedor('U', 820, 60, 110, 100, 10, '#00E676'); 
-        crearContenedor('D', 500, 440, 130, 150, 100, '#2979FF'); 
-        crearContenedor('C', 180, 840, 160, 150, 9999, '#FFD700'); 
+        // 📐 TOPOGRAFÍA EXTREMA (Más distancia vertical = más velocidad)
+        crearContenedor('U', 820, 100, 110, 100, 10, '#00E676'); // Base en Y=150
+        crearContenedor('D', 480, 530, 130, 150, 100, '#2979FF'); // Base en Y=605
+        crearContenedor('C', 160, 950, 160, 150, 9999, '#FFD700'); // Base en Y=1025
 
-        // 🚀 RAMPAS VECTORIALES REFORZADAS
-        crearRampa(890, 270, 540, 330); 
-        crearRampa(580, 690, 220, 750);
+        // 🚀 RAMPAS SÚPER INCLINADAS
+        // Inicia en Y=220 (debajo de U) y cae hasta Y=430 (centro de D)
+        crearRampa(880, 220, 520, 430); 
+        // Inicia en Y=680 (debajo de D) y cae hasta Y=850 (centro de C)
+        crearRampa(540, 680, 200, 850);
 
-        // --- LÓGICA DE INYECCIÓN INTELIGENTE ---
+        // --- LÓGICA DE INYECCIÓN ---
         let canicas = [];
 
         function inyectarCanica(valor) {
             reproducirSonido(valor === 5 ? 'drop5' : 'drop');
             let color = valor === 5 ? '#FF4081' : '#00E676';
-            let radio = valor === 5 ? 12 : 7; // Ligeramente más grandes para que no se cuelen
+            let radio = valor === 5 ? 12 : 7; 
             let masa = valor === 5 ? 5 : 1; 
 
             let nuevaCanica = Bodies.circle(820 + (Math.random() * 10 - 5), -20, radio, { 
-                restitution: 0.1, // Menos rebote
+                restitution: 0.2, 
                 mass: masa, 
                 friction: 0.005, 
-                frictionAir: 0.015, // 🛡️ EL SECRETO ANTI-TÚNEL: Limita la velocidad terminal de la caída
-                render: { fillStyle: color }
+                frictionAir: 0.01, 
+                render: { fillStyle: color },
+                // Las canicas chocan contra Muros, Puertas y otras Canicas
+                collisionFilter: { category: CAT_CANICA, mask: CAT_MURO | CAT_PUERTA | CAT_CANICA }
             });
             nuevaCanica.valor = valor; 
             nuevaCanica.sensoresPasados = new Set();
@@ -234,9 +263,12 @@
             let luzStatus = document.getElementById('servo-' + id);
             if(luzStatus) luzStatus.classList.add('servo-activo');
 
+            // 🔓 Al ser dinámica, la compuerta caerá guiada por la bisagra. 
+            // Como su máscara de colisión ignora las paredes, no explotará hacia afuera.
             Body.setStatic(mod.escotilla, false);
 
             setTimeout(() => {
+                // 🔒 CERRAR: Retorna a posición perfecta y se sella
                 Body.setStatic(mod.escotilla, true);
                 Body.setPosition(mod.escotilla, { x: mod.origX, y: mod.origY });
                 Body.setVelocity(mod.escotilla, { x: 0, y: 0 });
