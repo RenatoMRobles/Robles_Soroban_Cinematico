@@ -12,27 +12,42 @@
         }
         h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #00E676; margin-bottom: 5px; }
         
-        /* 🎛️ Estilo del Marcador Digital Holográfico */
         #marcador {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #FFD700; /* Oro corporativo */
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-            margin-bottom: 10px;
-            font-family: 'Courier New', Courier, monospace;
+            font-size: 3em; font-weight: bold; color: #FFD700; 
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); margin-bottom: 15px;
+            font-family: 'Courier New', Courier, monospace; letter-spacing: 5px;
         }
 
         #canvas-container {
-            width: 800px; height: 500px; border: 1px solid #333;
-            box-shadow: 0 0 20px rgba(0, 230, 118, 0.1); border-radius: 10px; margin-top: 10px;
+            width: 800px; height: 480px; border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.1); border-radius: 10px;
         }
-        .controls { margin-top: 10px; display: flex; gap: 10px; }
+        
+        /* Estilos del Tablero de Mando */
+        .panel-control {
+            display: flex; gap: 30px; margin-bottom: 15px;
+            background: #1E1E1E; padding: 10px 20px; border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .columna-btns { display: flex; flex-direction: column; gap: 5px; align-items: center;}
+        .titulo-col { font-size: 0.8em; color: #888; text-transform: uppercase; letter-spacing: 1px;}
+        .fila-btns { display: flex; gap: 5px; }
+        
         button {
-            background-color: #1E1E1E; color: #00E676; border: 1px solid #00E676;
-            padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: all 0.3s ease;
+            background-color: #121212; border: 1px solid; padding: 6px 12px;
+            border-radius: 4px; cursor: pointer; transition: all 0.2s ease; font-weight: bold;
         }
-        button:hover { background-color: #00E676; color: #121212; }
-        .btn-reset { color: #FF5252; border-color: #FF5252; }
+        /* Colores corporativos por magnitud */
+        .btn-u { color: #00E676; border-color: #00E676; }
+        .btn-u:hover { background-color: #00E676; color: #121212; }
+        
+        .btn-d { color: #2979FF; border-color: #2979FF; }
+        .btn-d:hover { background-color: #2979FF; color: #121212; }
+        
+        .btn-c { color: #FFD700; border-color: #FFD700; }
+        .btn-c:hover { background-color: #FFD700; color: #121212; }
+
+        .btn-reset { color: #FF5252; border-color: #FF5252; height: 100%; align-self: center; padding: 10px 20px;}
         .btn-reset:hover { background-color: #FF5252; color: #121212; }
     </style>
 </head>
@@ -40,15 +55,34 @@
     <h1>SOROBAN CINEMÁTICO</h1>
     <div id="marcador">000</div> 
     
-    <div class="controls">
-        <button onclick="agregarCanica(1)">+1 Unidad</button>
-        <button onclick="agregarCanica(5)">+5 Unidades</button>
-        <button class="btn-reset" onclick="limpiarSoroban()">Limpiar Soroban</button>
+    <div class="panel-control">
+        <div class="columna-btns">
+            <span class="titulo-col">Centenas</span>
+            <div class="fila-btns">
+                <button class="btn-c" onclick="agregarCanica('C', 1)">+100</button>
+                <button class="btn-c" onclick="agregarCanica('C', 5)">+500</button>
+            </div>
+        </div>
+        <div class="columna-btns">
+            <span class="titulo-col">Decenas</span>
+            <div class="fila-btns">
+                <button class="btn-d" onclick="agregarCanica('D', 1)">+10</button>
+                <button class="btn-d" onclick="agregarCanica('D', 5)">+50</button>
+            </div>
+        </div>
+        <div class="columna-btns">
+            <span class="titulo-col">Unidades</span>
+            <div class="fila-btns">
+                <button class="btn-u" onclick="agregarCanica('U', 1)">+1</button>
+                <button class="btn-u" onclick="agregarCanica('U', 5)">+5</button>
+            </div>
+        </div>
+        <button class="btn-reset" onclick="limpiarSoroban()">RESET</button>
     </div>
+
     <div id="canvas-container"></div>
 
     <script>
-        // Motores y Lógica Cuántica por Robles y Robles 🏢✨
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
               Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, 
               Composite = Matter.Composite;
@@ -57,114 +91,103 @@
         const render = Render.create({
             element: document.getElementById('canvas-container'),
             engine: engine,
-            options: { width: 800, height: 500, wireframes: false, background: 'transparent' }
+            options: { width: 800, height: 480, wireframes: false, background: 'transparent' }
         });
 
         const opPared = { render: { fillStyle: '#333' } };
 
-        // Función para construir columnas con gravedad (Código modular elegante 📐)
         function crearColumna(x) {
-            const base = Bodies.rectangle(x, 350, 140, 20, opPared);
-            const izq = Bodies.rectangle(x - 60, 260, 20, 200, opPared);
-            const der = Bodies.rectangle(x + 60, 260, 20, 200, opPared);
+            const base = Bodies.rectangle(x, 330, 140, 20, opPared);
+            const izq = Bodies.rectangle(x - 60, 240, 20, 200, opPared);
+            const der = Bodies.rectangle(x + 60, 240, 20, 200, opPared);
             const contenedor = Body.create({ parts: [base, izq, der], friction: 0.5, mass: 10, inertia: Infinity });
-            const ancla = Bodies.circle(x, 30, 10, { isStatic: true, render: { visible: false } });
+            const ancla = Bodies.circle(x, 20, 10, { isStatic: true, render: { visible: false } });
             const resorte = Constraint.create({
                 bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -80 }, 
                 stiffness: 0.007, damping: 0.1, length: 150      
             });
             Composite.add(engine.world, [contenedor, ancla, resorte]);
-            return contenedor; // Retornamos referencia si la necesitamos luego
         }
 
-        // Instanciamos la arquitectura: Centenas(Izq), Decenas(Centro), Unidades(Der)
-        crearColumna(150); // Centenas
-        crearColumna(400); // Decenas
-        crearColumna(650); // Unidades
+        // Instanciamos: Centenas(150), Decenas(400), Unidades(650)
+        crearColumna(150); crearColumna(400); crearColumna(650); 
 
-        // Variables Globales del Valor
-        let valUnidades = 0;
-        let valDecenas = 0;
-        let valCentenas = 0;
-        let canicasCuerpos = []; // Para poder borrarlas todas luego
+        // Variables de Lógica
+        let valUnidades = 0; let valDecenas = 0; let valCentenas = 0;
+        let canicasCuerpos = []; 
 
-        // Actualizar el HUD en tiempo real
         function actualizarMarcador() {
-            let total = valCentenas * 100 + valDecenas * 10 + valUnidades;
-            // Formatear a 3 dígitos (ej. 005, 042, 145)
+            let total = (valCentenas * 100) + (valDecenas * 10) + valUnidades;
             document.getElementById('marcador').innerText = total.toString().padStart(3, '0');
         }
 
-        function crearCanicaFisica(columna, valorVisual, tipo) {
-            let x = columna === 'unidades' ? 650 : (columna === 'decenas' ? 400 : 150);
-            
-            // Tamaños y colores corporativos
-            let radio = 15; let color = '#00E676'; let masa = 2; // Unidad base (1, 10, 100)
-            
-            if (tipo === 'tombolocha') { // La de valor 5
-                radio = 30; color = '#FF4081'; masa = 10;
-            } else if (columna === 'decenas') {
-                radio = 25; color = '#2979FF'; masa = 5; // Decena base
-            } else if (columna === 'centenas') {
-                radio = 35; color = '#FFD700'; masa = 8; // Centena base (Oro)
-            }
-
-            let nuevaCanica = Bodies.circle(x, 60, radio, { restitution: 0.5, mass: masa, render: { fillStyle: color } });
-            canicasCuerpos.push(nuevaCanica);
-            Composite.add(engine.world, nuevaCanica);
-        }
-
         function limpiarSoroban() {
-            // Eliminar todas las canicas físicas
             canicasCuerpos.forEach(c => Composite.remove(engine.world, c));
             canicasCuerpos = [];
-            // Resetear valores lógicos
             valUnidades = 0; valDecenas = 0; valCentenas = 0;
             actualizarMarcador();
         }
 
-        function agregarCanica(valor) {
-            valUnidades += valor;
+        function crearCanicaFisica(columna, valorFisico) {
+            let x = columna === 'U' ? 650 : (columna === 'D' ? 400 : 150);
             
-            // Instanciar físicamente
-            crearCanicaFisica('unidades', valor, valor === 5 ? 'tombolocha' : 'normal');
+            // Lógica de tamaños: Valor 1 (15px), Valor 5 (30px Tombolocha)
+            let radio = valorFisico === 1 ? 15 : 30;
+            let masa = valorFisico === 1 ? 2 : 10;
+            let color = '#FFF';
 
-            // Lógica en Cascada 🌊 (Unidades -> Decenas -> Centenas)
-            if (valUnidades >= 10) {
-                setTimeout(() => {
-                    let excedenteU = valUnidades - 10;
-                    valUnidades = excedenteU;
-                    valDecenas += 1; // Subimos una decena
-                    
-                    // Limpiar gráficamente SOLO unidades (Por ahora limpiamos todo el canvas por simplicidad física)
-                    // Para un efecto preciso, en el futuro filtraremos por coordenadas X
-                    limpiarSoroban(); 
-                    
-                    // Reconstruir estado actual en cadena
-                    valUnidades = excedenteU; 
-                    valDecenas += 1;
+            // Colores por magnitud
+            if (columna === 'U') color = valorFisico === 1 ? '#00E676' : '#FF4081'; // Verde / Rosa
+            if (columna === 'D') color = valorFisico === 1 ? '#2979FF' : '#B388FF'; // Azul / Morado
+            if (columna === 'C') color = valorFisico === 1 ? '#FFD700' : '#FF6D00'; // Oro / Naranja
 
-                    // Desborde a Centenas
-                    if(valDecenas >= 10) {
-                        let excedenteD = valDecenas - 10;
-                        valDecenas = excedenteD;
-                        valCentenas += 1;
-                    }
+            let nuevaCanica = Bodies.circle(x, 50, radio, { restitution: 0.5, mass: masa, render: { fillStyle: color } });
+            canicasCuerpos.push(nuevaCanica);
+            Composite.add(engine.world, nuevaCanica);
+        }
 
-                    // Renderizar el nuevo estado
-                    for(let i=0; i<valCentenas; i++) crearCanicaFisica('centenas', 100, 'normal');
-                    for(let i=0; i<valDecenas; i++) crearCanicaFisica('decenas', 10, 'normal');
-                    
-                    // Logica de re-renderizado de unidades (Optimizando tomo y uno)
-                    let reconstruir5 = Math.floor(valUnidades / 5);
-                    let reconstruir1 = valUnidades % 5;
-                    for(let i=0; i<reconstruir5; i++) crearCanicaFisica('unidades', 5, 'tombolocha');
-                    for(let i=0; i<reconstruir1; i++) crearCanicaFisica('unidades', 1, 'normal');
+        // Función Maestra de Inyección Universal
+        function agregarCanica(columna, valorFisico) {
+            if (columna === 'U') valUnidades += valorFisico;
+            if (columna === 'D') valDecenas += valorFisico;
+            if (columna === 'C') valCentenas += valorFisico;
 
-                    actualizarMarcador();
-                }, 500); // 🕒 Suspenso de medio segundo
-            }
+            crearCanicaFisica(columna, valorFisico);
             actualizarMarcador();
+            
+            // Dar tiempo a que caiga y luego checar desbordes globales
+            setTimeout(verificarDesbordes, 500);
+        }
+
+        function verificarDesbordes() {
+            let huboDesborde = false;
+
+            // Algoritmo de arrastre (Unidades -> Decenas -> Centenas)
+            if (valUnidades >= 10) { valDecenas += Math.floor(valUnidades / 10); valUnidades = valUnidades % 10; huboDesborde = true; }
+            if (valDecenas >= 10) { valCentenas += Math.floor(valDecenas / 10); valDecenas = valDecenas % 10; huboDesborde = true; }
+
+            if (huboDesborde) {
+                // Limpiar pantalla física y reconstruir el estado actual optimizado
+                canicasCuerpos.forEach(c => Composite.remove(engine.world, c));
+                canicasCuerpos = [];
+
+                // Reconstruir Centenas
+                let c5 = Math.floor(valCentenas / 5); let c1 = valCentenas % 5;
+                for(let i=0; i<c5; i++) crearCanicaFisica('C', 5);
+                for(let i=0; i<c1; i++) crearCanicaFisica('C', 1);
+
+                // Reconstruir Decenas
+                let d5 = Math.floor(valDecenas / 5); let d1 = valDecenas % 5;
+                for(let i=0; i<d5; i++) crearCanicaFisica('D', 5);
+                for(let i=0; i<d1; i++) crearCanicaFisica('D', 1);
+
+                // Reconstruir Unidades
+                let u5 = Math.floor(valUnidades / 5); let u1 = valUnidades % 5;
+                for(let i=0; i<u5; i++) crearCanicaFisica('U', 5);
+                for(let i=0; i<u1; i++) crearCanicaFisica('U', 1);
+                
+                actualizarMarcador();
+            }
         }
 
         Render.run(render);
