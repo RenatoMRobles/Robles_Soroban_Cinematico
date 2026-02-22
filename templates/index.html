@@ -56,7 +56,7 @@
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Entradas Asimétricas, Topes de Seguridad y Arpegio ASMR</p>
+    <p class="sub">Blindaje Anti-Túnel Cuántico y Acústica de Cristal</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanica(1)">+1 (Micro)</button>
@@ -77,7 +77,7 @@
     </div>
 
     <script>
-        // --- 🎶 SINTETIZADOR DE AUDIO ASMR (Ondas Senoidales Relajantes) ---
+        // --- 🎶 SINTETIZADOR DE AUDIO ASMR ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -87,32 +87,28 @@
             let ahora = audioCtx.currentTime;
             
             if (tipo === 'drop') { 
-                // Gota de cristal
                 osc.type = 'sine'; osc.frequency.setValueAtTime(1800, ahora); 
                 gainNode.gain.setValueAtTime(0.04, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.15);
                 osc.start(ahora); osc.stop(ahora + 0.15);
             } else if (tipo === 'drop5') { 
-                // Marimba profunda de cristal
                 osc.type = 'sine'; osc.frequency.setValueAtTime(700, ahora);
                 gainNode.gain.setValueAtTime(0.08, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.25);
                 osc.start(ahora); osc.stop(ahora + 0.25);
             } else if (tipo === 'victoria') { 
-                // 🎶 ARPEGIO ASMR DE VICTORIA (Do Mayor 7)
-                let frecuencias = [523.25, 659.25, 783.99, 987.77, 1046.50]; // Do, Mi, Sol, Si, Do
+                let frecuencias = [523.25, 659.25, 783.99, 987.77, 1046.50]; 
                 frecuencias.forEach((freq, index) => {
                     let oscV = audioCtx.createOscillator(); let gnV = audioCtx.createGain();
                     oscV.connect(gnV); gnV.connect(audioCtx.destination);
                     oscV.type = 'sine'; oscV.frequency.value = freq;
                     
-                    let tiempo = ahora + (index * 0.12); // Cascada lenta y relajante
+                    let tiempo = ahora + (index * 0.12); 
                     gnV.gain.setValueAtTime(0, tiempo);
-                    gnV.gain.linearRampToValueAtTime(0.08, tiempo + 0.05); // Suave ataque
-                    gnV.gain.exponentialRampToValueAtTime(0.001, tiempo + 1.5); // Resonancia larga
+                    gnV.gain.linearRampToValueAtTime(0.08, tiempo + 0.05); 
+                    gnV.gain.exponentialRampToValueAtTime(0.001, tiempo + 1.5); 
                     
                     oscV.start(tiempo); oscV.stop(tiempo + 1.5);
                 });
             } else if (tipo === 'beep') { 
-                // Campanilla del láser suave
                 osc.type = 'sine'; osc.frequency.setValueAtTime(2400, ahora); 
                 gainNode.gain.setValueAtTime(0.02, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.05);
                 osc.start(ahora); osc.stop(ahora + 0.05);
@@ -125,49 +121,45 @@
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 15; engine.velocityIterations = 15; 
+        engine.positionIterations = 16; engine.velocityIterations = 16; // Máxima fidelidad de colisión
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
             options: { width: 950, height: 950, wireframes: false, background: 'transparent' }
         });
 
-        // --- 📐 FUNCIONES GEOMÉTRICAS OPTIMIZADAS ---
+        // --- 📐 FUNCIONES GEOMÉTRICAS REFORZADAS ---
         const opPared = { isStatic: true, render: { fillStyle: '#444' } };
         let modulos = {}; 
 
-        // Rampa con TOPE DE SEGURIDAD
+        // 🛡️ RAMPAS REFORZADAS (Grosor 20px)
         function crearRampa(x1, y1, x2, y2) {
             let cx = (x1 + x2) / 2; let cy = (y1 + y2) / 2;
             let longitud = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
             let angulo = Math.atan2(y2 - y1, x2 - x1);
-            let rampa = Bodies.rectangle(cx, cy, longitud, 8, { isStatic: true, angle: angulo, render: { fillStyle: '#666' } });
+            let rampa = Bodies.rectangle(cx, cy, longitud, 20, { isStatic: true, angle: angulo, render: { fillStyle: '#555' } });
             
-            // 🛡️ Tope de seguridad en el inicio para evitar que caigan a la derecha
-            let tope = Bodies.rectangle(x1 + 5, y1 - 35, 8, 80, { isStatic: true, render: { fillStyle: '#555' } });
+            // Tope de seguridad
+            let tope = Bodies.rectangle(x1 + 10, y1 - 40, 15, 80, { isStatic: true, render: { fillStyle: '#444' } });
             
             Composite.add(engine.world, [rampa, tope]);
         }
 
         function crearContenedor(id, x, y, width, height, limit, colorBase) {
-            // Pared Izquierda (Normal)
-            const paredIzq = Bodies.rectangle(x - width/2, y, 10, height, opPared);
+            const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
             
-            // 🛡️ ARQUITECTURA ASIMÉTRICA: La pared derecha es solo el 40% inferior.
-            // Esto deja la parte superior completamente libre para que entre la rampa sin chocar.
             const alturaDer = height * 0.4;
-            const paredDer = Bodies.rectangle(x + width/2, y + (height - alturaDer)/2, 10, alturaDer, opPared);
+            const paredDer = Bodies.rectangle(x + width/2, y + (height - alturaDer)/2, 15, alturaDer, opPared);
             
-            // Guía Izquierda (actúa como tablero de básquetbol para atrapar las canicas rápidas)
-            const guiaIzq = Bodies.rectangle(x - width/2 - 10, y - height/2 - 40, 70, 8, { isStatic: true, angle: Math.PI/2.5, render: { fillStyle: '#555' } });
-            // Se eliminó por completo la guía derecha.
+            // Guía de entrada
+            const guiaIzq = Bodies.rectangle(x - width/2 - 10, y - height/2 - 40, 70, 15, { isStatic: true, angle: Math.PI/2.5, render: { fillStyle: '#444' } });
 
             const sensorLaser = Bodies.rectangle(x, y - height/2 + 20, width - 15, 10, { 
                 isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            // Escotilla estática
-            const escotilla = Bodies.rectangle(x, y + height/2, width + 10, 8, { isStatic: true, render: { fillStyle: colorBase } });
+            // 🛡️ ESCOTILLA REFORZADA (Grosor 20px) para aniquilar el túnel cuántico
+            const escotilla = Bodies.rectangle(x, y + height/2, width + 15, 20, { isStatic: true, render: { fillStyle: colorBase } });
             
             const bisagra = Constraint.create({
                 pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 5, y: 0 }, 
@@ -178,28 +170,30 @@
             modulos[id] = { id, escotilla, limite: limit, conteoActual: 0, abierta: false, origX: x, origY: y + height/2 };
         }
 
-        // 📐 TOPOGRAFÍA PERFECTA (Distancias recalibradas para garantizar Clearance)
-        crearContenedor('U', 820, 60, 110, 100, 10, '#00E676'); // Base en Y=110
-        crearContenedor('D', 500, 440, 130, 150, 100, '#2979FF'); // Base en Y=515
-        crearContenedor('C', 180, 840, 160, 150, 9999, '#FFD700'); // Base en Y=915
+        // 📐 TOPOGRAFÍA PERFECTA
+        crearContenedor('U', 820, 60, 110, 100, 10, '#00E676'); 
+        crearContenedor('D', 500, 440, 130, 150, 100, '#2979FF'); 
+        crearContenedor('C', 180, 840, 160, 150, 9999, '#FFD700'); 
 
-        // 🚀 RAMPAS CON TOPES (El inicio está por debajo de las puertas extendidas)
-        // Rampa U -> D. Inicia segura en 890, cae justo en 540 (adentro del contenedor abierto D)
+        // 🚀 RAMPAS VECTORIALES REFORZADAS
         crearRampa(890, 270, 540, 330); 
-        // Rampa D -> C. Inicia segura en 580, cae justo en 220 (adentro del contenedor abierto C)
         crearRampa(580, 690, 220, 750);
 
-        // --- LÓGICA DE INYECCIÓN ---
+        // --- LÓGICA DE INYECCIÓN INTELIGENTE ---
         let canicas = [];
 
         function inyectarCanica(valor) {
             reproducirSonido(valor === 5 ? 'drop5' : 'drop');
             let color = valor === 5 ? '#FF4081' : '#00E676';
-            let radio = valor === 5 ? 9 : 6; // Tombolocha fina, fluye sin atorarse
+            let radio = valor === 5 ? 12 : 7; // Ligeramente más grandes para que no se cuelen
             let masa = valor === 5 ? 5 : 1; 
 
             let nuevaCanica = Bodies.circle(820 + (Math.random() * 10 - 5), -20, radio, { 
-                restitution: 0.2, mass: masa, friction: 0.001, frictionAir: 0.002, render: { fillStyle: color }
+                restitution: 0.1, // Menos rebote
+                mass: masa, 
+                friction: 0.005, 
+                frictionAir: 0.015, // 🛡️ EL SECRETO ANTI-TÚNEL: Limita la velocidad terminal de la caída
+                render: { fillStyle: color }
             });
             nuevaCanica.valor = valor; 
             nuevaCanica.sensoresPasados = new Set();
