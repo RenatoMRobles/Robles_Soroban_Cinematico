@@ -23,6 +23,7 @@
             border-radius: 6px; cursor: pointer; transition: all 0.2s ease; font-weight: bold; font-size: 1em;
         }
         .btn-u { color: #00E676; border-color: #00E676; } .btn-u:hover { background-color: #00E676; color: #121212; }
+        .btn-t { color: #FF4081; border-color: #FF4081; } .btn-t:hover { background-color: #FF4081; color: #121212; }
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
         .btn-reset { color: #FF5252; border-color: #FF5252; } .btn-reset:hover { background-color: #FF5252; color: #121212; }
 
@@ -32,34 +33,35 @@
             box-shadow: inset 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; background-color: transparent;
         }
 
-        /* Displays Digitales LED */
+        /* Displays Digitales LED - Reposicionados con las nuevas alturas */
         .display-led {
             position: absolute; background: #000; border: 2px solid #333; border-radius: 5px;
             font-family: 'Courier New', Courier, monospace; font-size: 1.5em; font-weight: bold; 
             text-align: center; width: 60px; padding: 2px 0; z-index: 10;
         }
-        #led-U { left: 785px; top: 180px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
-        #led-D { left: 450px; top: 410px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
-        #led-C { left: 130px; top: 680px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
+        #led-U { left: 785px; top: 110px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
+        #led-D { left: 450px; top: 350px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
+        #led-C { left: 130px; top: 650px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
         
-        /* Indicadores de Servomotor (Movidos al lado DERECHO donde ahora están las bisagras) */
+        /* Indicadores de Servomotor - Posicionados exactamente junto a las compuertas */
         .servo-status {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #333; border: 1px solid #111; z-index: 10; transition: background 0.2s;
         }
         .servo-activo { background: #FF3D00; box-shadow: 0 0 20px #FF3D00; }
         
-        #servo-U { left: 875px; top: 205px; } 
-        #servo-D { left: 550px; top: 475px; }
+        #servo-U { left: 875px; top: 125px; } 
+        #servo-D { left: 550px; top: 385px; }
     </style>
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Sellado Hermético y Vaciado Direccional</p>
+    <p class="sub">Altura Calibrada, Escotillas Selladas y Tombolochas Analógicas</p>
     
     <div class="panel-control">
-        <button class="btn-u" onclick="inyectarCanicas(1)">Inyectar +1 Micro-Canica</button>
-        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Lote Completo)</button>
+        <button class="btn-u" onclick="inyectarCanica(1)">+1 (Micro)</button>
+        <button class="btn-t" onclick="inyectarCanica(5)">+5 (Tombolocha)</button>
+        <button class="btn-d" onclick="inyectarLote(10)">+10 (Lote Micro)</button>
         <button class="btn-reset" onclick="limpiarMundo()">Limpiar Maqueta</button>
     </div>
 
@@ -75,7 +77,7 @@
     </div>
 
     <script>
-        // --- SINTETIZADOR DE AUDIO INDUSTRIAL ---
+        // --- SINTETIZADOR DE AUDIO ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -88,6 +90,10 @@
                 osc.type = 'square'; osc.frequency.setValueAtTime(900, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.03);
                 gainNode.gain.setValueAtTime(0.01, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.03);
                 osc.start(ahora); osc.stop(ahora + 0.03);
+            } else if (tipo === 'drop5') { // Sonido más grave para la Tombolocha
+                osc.type = 'square'; osc.frequency.setValueAtTime(400, ahora); osc.frequency.exponentialRampToValueAtTime(600, ahora + 0.05);
+                gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.05);
+                osc.start(ahora); osc.stop(ahora + 0.05);
             } else if (tipo === 'servo') { 
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ahora); osc.frequency.linearRampToValueAtTime(100, ahora + 0.5);
                 gainNode.gain.setValueAtTime(0.08, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.5);
@@ -105,14 +111,14 @@
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 10; engine.velocityIterations = 10;
+        engine.positionIterations = 12; engine.velocityIterations = 12; // Extra precisión
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
             options: { width: 950, height: 750, wireframes: false, background: 'transparent' }
         });
 
-        // --- ARQUITECTURA: CONTENEDORES DE CASCADA BLINDADOS ---
+        // --- ARQUITECTURA: CONTENEDORES ELEVADOS Y SELLADOS ---
         const opPared = { isStatic: true, render: { fillStyle: '#444' } };
         let modulos = {}; 
 
@@ -127,17 +133,14 @@
                 isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            // 🛡️ FIX 1: ESCOTILLA ESTÁTICA Y SOBREDIMENSIONADA. 
-            // Es un 10% más ancha para solaparse con las paredes y bloquear cualquier fuga.
-            const escotilla = Bodies.rectangle(x, y + height/2, width + 10, 20, { 
-                isStatic: true, // Esto la hace impenetrable
-                render: { fillStyle: colorBase } 
+            // 🛡️ ESCOTILLA ESTÁTICA EXTRAGRANDE (Previene Túnel Cuántico)
+            const escotilla = Bodies.rectangle(x, y + height/2, width + 15, 20, { 
+                isStatic: true, render: { fillStyle: colorBase } 
             });
             
-            // 🔧 FIX 2: BISAGRA A LA DERECHA (Para que caiga hacia la Izquierda)
-            // Aunque es estática, preparamos la bisagra para cuando la activemos
+            // 🔧 BISAGRA A LA DERECHA (La puerta colapsa del lado Izquierdo)
             const bisagra = Constraint.create({
-                pointA: { x: x + width/2 - 5, y: y + height/2 }, // Punto de anclaje a la derecha
+                pointA: { x: x + width/2 - 5, y: y + height/2 }, 
                 bodyB: escotilla, 
                 pointB: { x: width/2 - 5, y: 0 }, 
                 stiffness: 1, length: 0, render: { visible: false }
@@ -145,38 +148,50 @@
 
             Composite.add(engine.world, [paredIzq, paredDer, guiaIzq, guiaDer, sensorLaser, escotilla, bisagra]);
             
-            // Guardamos coordenadas originales para forzar el cierre perfecto después
-            modulos[id] = { 
-                id, escotilla, limite: limit, conteoActual: 0, abierta: false, 
-                origX: x, origY: y + height/2 
-            };
+            modulos[id] = { id, escotilla, limite: limit, conteoActual: 0, abierta: false, origX: x, origY: y + height/2 };
         }
 
-        // --- INSTANCIAR LOS MÓDULOS ---
-        crearContenedor('U', 820, 150, 90, 120, 10, '#00E676'); 
-        crearContenedor('D', 480, 380, 120, 200, 100, '#2979FF'); 
-        crearContenedor('C', 160, 650, 160, 250, 9999, '#FFD700'); // Final
+        // 📐 COORDENADAS RECALIBRADAS (Los contenedores están SOBRE las rampas)
+        // U: Unidades. (Elevado para caer en la rampa)
+        crearContenedor('U', 820, 80, 90, 100, 10, '#00E676'); 
+        // D: Decenas. 
+        crearContenedor('D', 480, 320, 120, 150, 100, '#2979FF'); 
+        // C: Centenas. Final.
+        crearContenedor('C', 160, 620, 160, 200, 9999, '#FFD700'); 
 
-        // --- RAMPAS METÁLICAS ---
-        Composite.add(engine.world, Bodies.rectangle(650, 240, 380, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
-        Composite.add(engine.world, Bodies.rectangle(320, 500, 360, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
+        // 📐 RAMPAS METÁLICAS (Ajustadas para recibir la masa perfectamente)
+        // Rampa U->D
+        Composite.add(engine.world, Bodies.rectangle(650, 190, 380, 15, { isStatic: true, angle: -0.22, render: { fillStyle: '#666' } }));
+        // Rampa D->C
+        Composite.add(engine.world, Bodies.rectangle(320, 460, 360, 15, { isStatic: true, angle: -0.22, render: { fillStyle: '#666' } }));
 
-        // --- LÓGICA DE INYECCIÓN LÍQUIDA ---
+        // --- LÓGICA DE INYECCIÓN INTELIGENTE ---
         let canicas = [];
-        function inyectarCanicas(cantidad) {
+
+        // Función para inyectar 1 canica (Normal o Tombolocha)
+        function inyectarCanica(valor) {
+            reproducirSonido(valor === 5 ? 'drop5' : 'drop');
+            let color = valor === 5 ? '#FF4081' : '#00E676';
+            let radio = valor === 5 ? 12 : 6;
+            let masa = valor === 5 ? 5 : 1; 
+
+            let nuevaCanica = Bodies.circle(820 + (Math.random() * 20 - 10), -40, radio, { 
+                restitution: 0.1, mass: masa, friction: 0.001, frictionAir: 0.002, render: { fillStyle: color }
+            });
+            nuevaCanica.valor = valor; // El sensor leerá esto
+            nuevaCanica.sensoresPasados = new Set();
+            canicas.push(nuevaCanica);
+            Composite.add(engine.world, nuevaCanica);
+        }
+
+        // Función para el Lote rápido
+        function inyectarLote(cantidad) {
             let inyectadas = 0;
             let intervalo = setInterval(() => {
-                reproducirSonido('drop');
-                let nuevaCanica = Bodies.circle(820 + (Math.random() * 30 - 15), -40, 6, { 
-                    restitution: 0.1, mass: 1, friction: 0.001, frictionAir: 0.002, render: { fillStyle: '#00E676' }
-                });
-                nuevaCanica.sensoresPasados = new Set();
-                canicas.push(nuevaCanica);
-                Composite.add(engine.world, nuevaCanica);
-                
+                inyectarCanica(1);
                 inyectadas++;
                 if (inyectadas >= cantidad) clearInterval(intervalo);
-            }, 80); 
+            }, 100); 
         }
 
         function limpiarMundo() {
@@ -192,7 +207,7 @@
             document.getElementById('led-C').innerText = modulos['C'].conteoActual.toString().padStart(3, '0');
         }
 
-        // --- CEREBRO DIGITAL DEL SERVOMOTOR ---
+        // --- CEREBRO DEL SERVOMOTOR ---
         function accionarServo(id) {
             let mod = modulos[id];
             if (mod.abierta) return;
@@ -202,12 +217,12 @@
             let luzStatus = document.getElementById('servo-' + id);
             if(luzStatus) luzStatus.classList.add('servo-activo');
 
-            // 🔓 ABRIR: Convertir en dinámica. La bisagra derecha la sostiene, el lado izquierdo colapsa.
+            // 🔓 ABRIR: Soltamos el candado estático. Cae del lado izquierdo.
             Body.setStatic(mod.escotilla, false);
 
-            // Darle tiempo para que caiga todo el lote de canicas
+            // Darle 3 segundos para que caigan incluso las Tombolochas
             setTimeout(() => {
-                // 🔒 CERRAR: Forzar la posición original y convertirla en estática impenetrable de nuevo.
+                // 🔒 CERRAR: Forzar la posición original geométrica
                 Body.setStatic(mod.escotilla, true);
                 Body.setPosition(mod.escotilla, { x: mod.origX, y: mod.origY });
                 Body.setVelocity(mod.escotilla, { x: 0, y: 0 });
@@ -215,13 +230,13 @@
                 Body.setAngularVelocity(mod.escotilla, 0);
                 
                 if(luzStatus) luzStatus.classList.remove('servo-activo');
-                mod.conteoActual = 0; // Resetear LED
+                mod.conteoActual = 0; // Se resetea el display a 00
                 mod.abierta = false;
                 actualizarDisplays();
-            }, 2500); // 2.5 segundos exactos
+            }, 3000);
         }
 
-        // --- SISTEMA DE SENSORES LÁSER ---
+        // --- SENSORES LÁSER MULTI-VALOR ---
         Events.on(engine, 'collisionStart', function(event) {
             event.pairs.forEach(pair => {
                 let bodyA = pair.bodyA; let bodyB = pair.bodyB;
@@ -238,14 +253,17 @@
                         reproducirSonido('beep');
                         
                         let mod = modulos[moduloId];
-                        mod.conteoActual++;
+                        
+                        // 🧠 Inteligencia Analógica: Sumamos el VALOR REAL de la canica (1 o 5)
+                        mod.conteoActual += canica.valor;
                         actualizarDisplays();
 
-                        if (moduloId === 'D') canica.render.fillStyle = '#2979FF';
-                        if (moduloId === 'C') canica.render.fillStyle = '#FFD700';
+                        // Pintura Corporativa dependiendo del contenedor y del tipo de canica
+                        if (moduloId === 'D') canica.render.fillStyle = canica.valor === 5 ? '#B388FF' : '#2979FF'; // Morado o Azul
+                        if (moduloId === 'C') canica.render.fillStyle = canica.valor === 5 ? '#FF6D00' : '#FFD700'; // Naranja u Oro
 
-                        // 🎯 CONDICIÓN EXACTA DE APERTURA
-                        if (mod.conteoActual === mod.limite && !mod.abierta) {
+                        // 🎯 CONDICIÓN EXACTA DE APERTURA: Si se alcanza o sobrepasa el límite
+                        if (mod.conteoActual >= mod.limite && !mod.abierta) {
                             accionarServo(moduloId);
                         }
                     }
