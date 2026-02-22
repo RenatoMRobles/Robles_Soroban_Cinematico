@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soroban Cinemático - Robles y Robles</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; background-color: #121212;
+            color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center; overflow: hidden;
+        }
+        h1 { margin-top: 20px; font-weight: 300; letter-spacing: 2px; color: #00E676; }
+        #canvas-container {
+            width: 800px; height: 600px; border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.1); border-radius: 10px; margin-top: 20px;
+        }
+        .controls { margin-top: 20px; }
+        button {
+            background-color: #1E1E1E; color: #00E676; border: 1px solid #00E676;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: all 0.3s ease;
+        }
+        button:hover { background-color: #00E676; color: #121212; }
+    </style>
+</head>
+<body>
+    <h1>SOROBAN CINEMÁTICO</h1>
+    <div class="controls">
+        <button onclick="agregarCanica(1)">+1 Unidad (Canica)</button>
+        <button onclick="agregarCanica(5)">+5 Unidades (Tombolocha)</button>
+    </div>
+    <div id="canvas-container"></div>
+    <script>
+        const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, Bodies = Matter.Bodies, Composite = Matter.Composite;
+        const engine = Engine.create();
+        const render = Render.create({
+            element: document.getElementById('canvas-container'),
+            engine: engine,
+            options: { width: 800, height: 600, wireframes: false, background: 'transparent' }
+        });
+
+        const suelo = Bodies.rectangle(400, 590, 200, 20, { isStatic: true, render: { fillStyle: '#333' } });
+        const paredIzq = Bodies.rectangle(310, 500, 20, 200, { isStatic: true, render: { fillStyle: '#333' } });
+        const paredDer = Bodies.rectangle(490, 500, 20, 200, { isStatic: true, render: { fillStyle: '#333' } });
+        
+        Composite.add(engine.world, [suelo, paredIzq, paredDer]);
+        let contadorUnidades = 0;
+
+        function agregarCanica(valor) {
+            contadorUnidades += valor;
+            if (contadorUnidades >= 10) {
+                console.log("¡Límite alcanzado! Compactando...");
+                Matter.Composite.clear(engine.world, true);
+                Composite.add(engine.world, [suelo, paredIzq, paredDer]); 
+                contadorUnidades = contadorUnidades - 10;
+                return;
+            }
+            let radio = valor === 1 ? 15 : 30;
+            let color = valor === 1 ? '#00E676' : '#FF4081';
+            let nuevaCanica = Bodies.circle(400, 50, radio, { restitution: 0.6, render: { fillStyle: color } });
+            Composite.add(engine.world, nuevaCanica);
+        }
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+    </script>
+</body>
+</html>
