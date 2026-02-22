@@ -30,8 +30,16 @@
         <button onclick="agregarCanica(5)">+5 Unidades (Tombolocha)</button>
     </div>
     <div id="canvas-container"></div>
-    <script>
-        const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, Bodies = Matter.Bodies, Composite = Matter.Composite;
+    <<script>
+        // Inicialización ampliada por Elena 🏃‍♀️💨 (Agregamos Body y Constraint)
+        const Engine = Matter.Engine, 
+              Render = Matter.Render, 
+              Runner = Matter.Runner, 
+              Bodies = Matter.Bodies, 
+              Body = Matter.Body, 
+              Constraint = Matter.Constraint, 
+              Composite = Matter.Composite;
+
         const engine = Engine.create();
         const render = Render.create({
             element: document.getElementById('canvas-container'),
@@ -39,27 +47,68 @@
             options: { width: 800, height: 600, wireframes: false, background: 'transparent' }
         });
 
-        const suelo = Bodies.rectangle(400, 590, 200, 20, { isStatic: true, render: { fillStyle: '#333' } });
-        const paredIzq = Bodies.rectangle(310, 500, 20, 200, { isStatic: true, render: { fillStyle: '#333' } });
-        const paredDer = Bodies.rectangle(490, 500, 20, 200, { isStatic: true, render: { fillStyle: '#333' } });
+        // 🏗️ 1. Construir las piezas del contenedor
+        const opcionesPared = { render: { fillStyle: '#333' } };
+        const base = Bodies.rectangle(400, 350, 160, 20, opcionesPared);
+        const izq = Bodies.rectangle(330, 260, 20, 200, opcionesPared);
+        const der = Bodies.rectangle(470, 260, 20, 200, opcionesPared);
+
+        // Agrupamos las piezas en un solo "Cuerpo Dinámico" ($m$ = 10 por defecto)
+        const contenedor = Body.create({
+            parts: [base, izq, der],
+            friction: 0.5,
+            mass: 10 
+        });
+
+        // ⚓ 2. El punto de anclaje (Estático e invisible arriba en el cielo)
+        const ancla = Bodies.circle(400, 50, 10, { isStatic: true, render: { visible: false } });
+
+        // 🔗 3. El resorte (La Magia de la Gravedad)
+        const resorte = Constraint.create({
+            bodyA: ancla,
+            bodyB: contenedor,
+            pointB: { x: 0, y: -80 }, // Conectamos el resorte a la parte superior del contenedor
+            stiffness: 0.03, // Constante elástica k (qué tan duro es el resorte)
+            damping: 0.08,   // Fricción para que no rebote eternamente
+            length: 150      // Longitud en reposo
+        });
         
-        Composite.add(engine.world, [suelo, paredIzq, paredDer]);
+        Composite.add(engine.world, [contenedor, ancla, resorte]);
+        
         let contadorUnidades = 0;
+        let canicasActivas = []; // Llevamos un registro de las canicas físicas
 
         function agregarCanica(valor) {
             contadorUnidades += valor;
+            
+            // LÓGICA DE DESBORDE (Al llegar a 10)
             if (contadorUnidades >= 10) {
-                console.log("¡Límite alcanzado! Compactando...");
-                Matter.Composite.clear(engine.world, true);
-                Composite.add(engine.world, [suelo, paredIzq, paredDer]); 
+                console.log("¡Límite alcanzado! Extrayendo unidades...");
+                
+                // Solo eliminamos las canicas, ¡no el contenedor!
+                canicasActivas.forEach(c => Composite.remove(engine.world, c));
+                canicasActivas = []; // Vaciamos el registro
                 contadorUnidades = contadorUnidades - 10;
+                
+                // ¡Al quitar el peso, verás el contenedor rebotar hacia arriba maravillosamente! 🎈
                 return;
             }
+
+            // Generar la canica con masa equivalente a su valor
             let radio = valor === 1 ? 15 : 30;
             let color = valor === 1 ? '#00E676' : '#FF4081';
-            let nuevaCanica = Bodies.circle(400, 50, radio, { restitution: 0.6, render: { fillStyle: color } });
+            let masa = valor === 1 ? 2 : 10; // La tombolocha pesa 5 veces más
+            
+            let nuevaCanica = Bodies.circle(400, 100, radio, { 
+                restitution: 0.5, 
+                mass: masa,
+                render: { fillStyle: color } 
+            });
+            
+            canicasActivas.push(nuevaCanica); // Guardamos referencia
             Composite.add(engine.world, nuevaCanica);
         }
+
         Render.run(render);
         const runner = Runner.create();
         Runner.run(runner, engine);
