@@ -2,19 +2,19 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Soroban Cinemático - Prueba Física</title>
+    <title>Soroban Físico - Prototipo Real</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
-            margin: 0; padding: 0; background-color: #121212;
+            margin: 0; padding: 0; background-color: #0D0D0D; /* Aún más oscuro para resaltar los LEDs */
             color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; overflow: hidden;
         }
-        h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #FF4081; margin-bottom: 5px; }
+        h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #00E676; margin-bottom: 5px; }
         p.sub { color: #888; margin-top: 0; font-size: 0.9em; letter-spacing: 1px;}
         
         .panel-control {
-            display: flex; gap: 15px; margin-bottom: 15px; z-index: 20;
+            display: flex; gap: 15px; margin-bottom: 10px; z-index: 20;
             background: #1A1A1A; padding: 12px 20px; border-radius: 12px;
             border: 1px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
@@ -26,26 +26,59 @@
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
         .btn-reset { color: #FF5252; border-color: #FF5252; } .btn-reset:hover { background-color: #FF5252; color: #121212; }
 
+        #escenario-wrapper { position: relative; width: 950px; height: 750px; }
         #canvas-container {
-            width: 900px; height: 700px; border: 1px solid #333;
-            box-shadow: 0 0 30px rgba(255, 64, 129, 0.15); border-radius: 10px; background-color: transparent;
+            width: 100%; height: 100%; border: 1px solid #333;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8); border-radius: 10px; background-color: transparent;
         }
+
+        /* Displays Digitales LED adheridos a los contenedores */
+        .display-led {
+            position: absolute;
+            background: #000; border: 2px solid #333; border-radius: 5px;
+            color: #FF0000; font-family: 'Courier New', Courier, monospace;
+            font-size: 1.5em; font-weight: bold; text-align: center;
+            width: 60px; padding: 2px 0;
+            box-shadow: 0 0 10px rgba(255,0,0,0.3); z-index: 10;
+        }
+        #led-U { left: 785px; top: 180px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
+        #led-D { left: 460px; top: 410px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
+        #led-C { left: 140px; top: 640px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
+        
+        /* Indicadores de Servomotor (Se encienden cuando la compuerta se abre) */
+        .servo-status {
+            position: absolute; width: 12px; height: 12px; border-radius: 50%;
+            background: #333; border: 1px solid #111; z-index: 10; transition: background 0.2s;
+        }
+        .servo-activo { background: #FF3D00; box-shadow: 0 0 15px #FF3D00; }
+        
+        #servo-U { left: 755px; top: 220px; }
+        #servo-D { left: 410px; top: 480px; }
     </style>
 </head>
 <body>
-    <h1>MODO EXPERIMENTAL: RUBE GOLDBERG</h1>
-    <p class="sub">Computación Física Pura por Robles y Robles</p>
+    <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
+    <p class="sub">Computación Física con Sensores Laser y Servomotores</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanicas(1)">Inyectar +1 Micro-Canica</button>
-        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Torrente)</button>
-        <button class="btn-reset" onclick="limpiarMundo()">Purgar Sistema</button>
+        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Probar Lote)</button>
+        <button class="btn-reset" onclick="limpiarMundo()">Limpiar Maqueta</button>
     </div>
 
-    <div id="canvas-container"></div>
+    <div id="escenario-wrapper">
+        <div id="led-U" class="display-led">00</div>
+        <div id="led-D" class="display-led">000</div>
+        <div id="led-C" class="display-led">000</div>
+        
+        <div id="servo-U" class="servo-status"></div>
+        <div id="servo-D" class="servo-status"></div>
+
+        <div id="canvas-container"></div>
+    </div>
 
     <script>
-        // --- AUDIO ---
+        // --- SINTETIZADOR DE AUDIO INDUSTRIAL ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -54,149 +87,182 @@
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
             let ahora = audioCtx.currentTime;
             
-            if (tipo === 'drop') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.05);
-                gainNode.gain.setValueAtTime(0.05, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.05);
+            if (tipo === 'drop') { // Clic mecánico
+                osc.type = 'square'; osc.frequency.setValueAtTime(900, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.03);
+                gainNode.gain.setValueAtTime(0.02, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.03);
+                osc.start(ahora); osc.stop(ahora + 0.03);
+            } else if (tipo === 'servo') { // Sonido eléctrico de compuerta
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ahora); osc.frequency.linearRampToValueAtTime(100, ahora + 0.5);
+                gainNode.gain.setValueAtTime(0.08, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.5);
+                osc.start(ahora); osc.stop(ahora + 0.5);
+            } else if (tipo === 'beep') { // Beep del sensor láser
+                osc.type = 'sine'; osc.frequency.setValueAtTime(2000, ahora); 
+                gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.05);
                 osc.start(ahora); osc.stop(ahora + 0.05);
-            } else if (tipo === 'alarma') {
-                // Sonido de compuerta abriéndose
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, ahora); osc.frequency.linearRampToValueAtTime(150, ahora + 0.4);
-                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.4);
-                osc.start(ahora); osc.stop(ahora + 0.4);
             }
         }
 
-        // --- MOTOR FÍSICO ---
+        // --- MOTOR FÍSICO DE ALTA PRECISIÓN ---
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
               Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, 
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 8; engine.velocityIterations = 8; // Máxima precisión
+        engine.positionIterations = 10; engine.velocityIterations = 10; // Extra precisión para micro-canicas
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
-            options: { width: 900, height: 700, wireframes: false, background: 'transparent' }
+            options: { width: 950, height: 750, wireframes: false, background: 'transparent' }
         });
 
-        // --- ARQUITECTURA EN ESCALERA ---
-        const opPared = { render: { fillStyle: '#444' } };
-        let columnasData = {}; // Guardaremos referencias para abrir las compuertas
+        // --- ARQUITECTURA DE CASCADA CON SERVO-ESCOTILLAS ---
+        const opPared = { isStatic: true, render: { fillStyle: '#444' } };
+        let modulos = {}; // Diccionario para controlar las cajas y compuertas
 
-        // Función constructora del Contenedor Mecánico
-        function crearColumna(id, x, y, stiffness, colorBase) {
-            // 1. Base inclinada hacia la IZQUIERDA para que las canicas rueden a la compuerta
-            const base = Bodies.rectangle(x, y, 100, 15, { angle: -0.15, render: { fillStyle: '#333' } });
-            const paredDer = Bodies.rectangle(x + 45, y - 60, 15, 140, opPared);
-            const paredIzqSup = Bodies.rectangle(x - 45, y - 90, 15, 80, opPared); // Deja un hueco abajo
-
-            const contenedor = Body.create({ parts: [base, paredDer, paredIzqSup], friction: 0.1, mass: 15, inertia: Infinity });
-            contenedor.label = 'contenedor_' + id;
-
-            // 2. Resorte calibrado
-            const ancla = Bodies.circle(x, y - 180, 10, { isStatic: true, render: { visible: false } });
-            const resorte = Constraint.create({ bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -60 }, stiffness: stiffness, damping: 0.1, length: 120 });
-
-            // 3. La Compuerta (Cuerpo independiente atado con bisagras)
-            const puerta = Bodies.rectangle(x - 45, y - 25, 15, 50, { render: { fillStyle: colorBase } });
+        function crearContenedor(id, x, y, width, height, limit, colorBase) {
+            // 1. Paredes Estáticas (Forman la caja cerrada)
+            const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
+            const paredDer = Bodies.rectangle(x + width/2, y, 15, height, opPared);
             
-            // Bisagra superior (eje de rotación)
-            const bisagra = Constraint.create({ bodyA: contenedor, pointA: { x: -45, y: -50 }, bodyB: puerta, pointB: { x: 0, y: -25 }, stiffness: 1, length: 0, render: { visible: false } });
-            // Cerrojo inferior (mantiene cerrada la puerta)
-            const cerrojo = Constraint.create({ bodyA: contenedor, pointA: { x: -45, y: 0 }, bodyB: puerta, pointB: { x: 0, y: 25 }, stiffness: 1, length: 0, render: { visible: false } });
+            // 2. Techo con Embudo
+            const embudoIzq = Bodies.rectangle(x - width/2 + 10, y - height/2 - 15, width, 15, { isStatic: true, angle: Math.PI/6, render: { fillStyle: '#555' } });
+            const embudoDer = Bodies.rectangle(x + width/2 - 10, y - height/2 - 15, width, 15, { isStatic: true, angle: -Math.PI/6, render: { fillStyle: '#555' } });
 
-            // 4. El Botón Sensor de Presión (Debajo del contenedor)
-            const boton = Bodies.rectangle(x, y + 60, 60, 15, { isStatic: true, isSensor: true, render: { fillStyle: '#222' } });
-            boton.label = 'boton_' + id;
+            // 3. Sensor Digital Infrarrojo (Inmaterial, justo debajo del embudo)
+            const sensorLaser = Bodies.rectangle(x, y - height/2 + 10, width - 20, 10, { 
+                isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.2)' } 
+            });
 
-            Composite.add(engine.world, [contenedor, ancla, resorte, puerta, bisagra, cerrojo, boton]);
+            // 4. Escotilla Inferior (Dinámica, atada con bisagras)
+            // Está ligeramente inclinada para que las canicas salgan naturalmente a la rampa
+            const escotilla = Bodies.rectangle(x, y + height/2, width - 5, 15, { render: { fillStyle: colorBase } });
+            
+            // Bisagra izquierda (El Servomotor virtual)
+            const bisagra = Constraint.create({
+                pointA: { x: x - width/2 + 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: -width/2 + 10, y: 0 },
+                stiffness: 1, length: 0, render: { visible: false }
+            });
+            // Cerrojo derecho (Mantiene la puerta cerrada)
+            const cerrojo = Constraint.create({
+                pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 10, y: 0 },
+                stiffness: 1, length: 0, render: { visible: false }
+            });
 
-            // Guardar en el diccionario para controlarlo después
-            columnasData[id] = { id, contenedor, puerta, cerrojo, boton, color: colorBase, abierta: false };
+            Composite.add(engine.world, [paredIzq, paredDer, embudoIzq, embudoDer, sensorLaser, escotilla, bisagra, cerrojo]);
+
+            modulos[id] = { id, escotilla, cerrojo, limite: limit, conteoActual: 0, abierta: false };
         }
 
-        // --- INSTANCIAR ESCENARIO ---
-        // Unidades (Arriba Derecha) - Resorte muy suave (se acciona con 10 canicas)
-        crearColumna('U', 750, 200, 0.005, '#00E676');
+        // --- INSTANCIAR LOS MÓDULOS ---
+        // U: Unidades. Pequeña. Límite 10. (x: 820, y: 150)
+        crearContenedor('U', 820, 150, 70, 120, 10, '#00E676');
         
-        // Decenas (Medio Centro) - Resorte más tenso (se acciona con 100 canicas)
-        crearColumna('D', 450, 400, 0.05, '#2979FF');
+        // D: Decenas. Mediana. Límite 100. (x: 500, y: 380)
+        crearContenedor('D', 500, 380, 100, 200, 100, '#2979FF');
         
-        // Centenas (Abajo Izquierda) - Contenedor final estático (o muy duro)
-        crearColumna('C', 150, 600, 0.5, '#FFD700');
+        // C: Centenas. Grande. Depósito final. (x: 180, y: 600)
+        // Como es el depósito final, no tiene límite ni escotilla funcional por ahora, pero la construimos igual.
+        crearContenedor('C', 180, 600, 150, 250, 9999, '#FFD700');
 
-        // --- RAMPAS DE CASCADA ---
-        // Rampa de Unidades -> Decenas
-        Composite.add(engine.world, Bodies.rectangle(600, 260, 300, 15, { isStatic: true, angle: 0.35, render: { fillStyle: '#555' } }));
-        // Rampa de Decenas -> Centenas
-        Composite.add(engine.world, Bodies.rectangle(300, 460, 300, 15, { isStatic: true, angle: 0.35, render: { fillStyle: '#555' } }));
+        // --- RAMPAS METÁLICAS GEOMÉTRICAS ---
+        // Rampa de U a D: Conecta la caída de U (820, 220) con el embudo de D (500, 250)
+        Composite.add(engine.world, Bodies.rectangle(660, 250, 360, 15, { isStatic: true, angle: 0.25, render: { fillStyle: '#666' } }));
+        
+        // Rampa de D a C: Conecta la caída de D (500, 490) con el embudo de C (180, 440) -> Inclinación invertida
+        Composite.add(engine.world, Bodies.rectangle(340, 490, 360, 15, { isStatic: true, angle: 0.25, render: { fillStyle: '#666' } }));
 
+        // --- LÓGICA DE INYECCIÓN ---
         let canicas = [];
-
         function inyectarCanicas(cantidad) {
             let inyectadas = 0;
-            // Torrente en cascada: instanciamos una cada 80ms para no saturar el colisionador
             let intervalo = setInterval(() => {
                 reproducirSonido('drop');
-                // Aparecen justo sobre el contenedor de Unidades con un micro offset aleatorio
-                let nuevaCanica = Bodies.circle(750 + (Math.random() * 20 - 10), 0, 5, { // RADIO = 5 (10 veces más pequeñas!)
-                    restitution: 0.4, mass: 1, friction: 0.005, render: { fillStyle: '#00E676' }
+                // Caída aleatoria justo por encima del embudo de Unidades
+                let nuevaCanica = Bodies.circle(820 + (Math.random() * 20 - 10), -20, 6, { // Micro-canicas de radio 6
+                    restitution: 0.2, mass: 1, friction: 0.05, frictionAir: 0.005, render: { fillStyle: '#00E676' }
                 });
+                // Propiedad custom para evitar doble conteo en el mismo sensor
+                nuevaCanica.sensoresPasados = new Set();
                 canicas.push(nuevaCanica);
                 Composite.add(engine.world, nuevaCanica);
+                
                 inyectadas++;
                 if (inyectadas >= cantidad) clearInterval(intervalo);
-            }, 80);
+            }, 60); // Cadencia de disparo para evitar atascamientos
         }
 
         function limpiarMundo() {
             canicas.forEach(c => Composite.remove(engine.world, c));
             canicas = [];
+            ['U', 'D', 'C'].forEach(id => { modulos[id].conteoActual = 0; });
+            actualizarDisplays();
         }
 
-        // --- LÓGICA MECÁNICA DE COMPUERTAS ---
-        function abrirCompuerta(col) {
-            if (col.abierta) return;
-            col.abierta = true;
-            reproducirSonido('alarma');
+        function actualizarDisplays() {
+            document.getElementById('led-U').innerText = modulos['U'].conteoActual.toString().padStart(2, '0');
+            document.getElementById('led-D').innerText = modulos['D'].conteoActual.toString().padStart(3, '0');
+            document.getElementById('led-C').innerText = modulos['C'].conteoActual.toString().padStart(3, '0');
+        }
 
-            // 1. Iluminar botón como si se encendiera
-            col.boton.render.fillStyle = col.color;
-            col.boton.render.strokeStyle = '#FFF';
-            col.boton.render.lineWidth = 3;
+        // --- LÓGICA DEL SERVOMOTOR (LA ESCOTILLA) ---
+        function accionarServo(id) {
+            let mod = modulos[id];
+            if (mod.abierta) return;
+            mod.abierta = true;
+            
+            reproducirSonido('servo');
+            let luzStatus = document.getElementById('servo-' + id);
+            if(luzStatus) luzStatus.classList.add('servo-activo');
 
-            // 2. Destruir el cerrojo (la compuerta cede a la presión y las canicas caen)
-            Composite.remove(engine.world, col.cerrojo);
+            // Quitar el cerrojo para que la presión abra la puerta
+            Composite.remove(engine.world, mod.cerrojo);
 
-            // 3. Temporizador neumático para volver a cerrar la compuerta
+            // Temporizador: Darle 3 segundos para que se vacíe por completo
             setTimeout(() => {
-                // Regresar la puerta a su posición y ángulo cerrados usando cinemática
-                Body.setAngle(col.puerta, col.contenedor.angle);
-                Body.setPosition(col.puerta, { x: col.contenedor.position.x - 45, y: col.contenedor.position.y - 25 });
+                // Cinemática forzada para cerrar la puerta venciendo a las canicas lentas
+                Body.setAngle(mod.escotilla, 0);
+                Body.setAngularVelocity(mod.escotilla, 0);
                 
-                // Re-soldar el cerrojo
-                Composite.add(engine.world, col.cerrojo);
+                // Reposicionar y re-soldar el cerrojo
+                Composite.add(engine.world, mod.cerrojo);
                 
-                // Apagar el botón
-                col.boton.render.fillStyle = '#222';
-                col.boton.render.lineWidth = 0;
-                col.abierta = false;
-            }, 3500); // 3.5 segundos para asegurar que todas salgan
+                if(luzStatus) luzStatus.classList.remove('servo-activo');
+                mod.conteoActual = 0; // Se resetea la caja
+                mod.abierta = false;
+                actualizarDisplays();
+            }, 3000);
         }
 
-        // --- SENSORES DE COLISIÓN (EL CEREBRO DEL RUBE GOLDBERG) ---
+        // --- EL CEREBRO: SENSORES LÁSER INFRARROJOS ---
         Events.on(engine, 'collisionStart', function(event) {
             event.pairs.forEach(pair => {
-                let a = pair.bodyA.label;
-                let b = pair.bodyB.label;
+                let bodyA = pair.bodyA; let bodyB = pair.bodyB;
+                let sensor = null; let canica = null;
 
-                // Detectar si el Contenedor de Unidades toca su Botón
-                if ((a === 'contenedor_U' && b === 'boton_U') || (b === 'contenedor_U' && a === 'boton_U')) {
-                    abrirCompuerta(columnasData['U']);
-                }
-                // Detectar si el Contenedor de Decenas toca su Botón
-                if ((a === 'contenedor_D' && b === 'boton_D') || (b === 'contenedor_D' && a === 'boton_D')) {
-                    abrirCompuerta(columnasData['D']);
+                if (bodyA.label && bodyA.label.startsWith('sensor_')) { sensor = bodyA; canica = bodyB; }
+                else if (bodyB.label && bodyB.label.startsWith('sensor_')) { sensor = bodyB; canica = bodyA; }
+
+                if (sensor && canica && canica.sensoresPasados) {
+                    let moduloId = sensor.label.split('_')[1]; // Extrae 'U', 'D', o 'C'
+                    
+                    // Si la canica no ha pasado por este sensor aún
+                    if (!canica.sensoresPasados.has(moduloId)) {
+                        canica.sensoresPasados.add(moduloId); // Marcar como contada
+                        reproducirSonido('beep');
+                        
+                        let mod = modulos[moduloId];
+                        mod.conteoActual++;
+                        actualizarDisplays();
+
+                        // Cambio de color visual para saber en qué etapa están
+                        if (moduloId === 'D') canica.render.fillStyle = '#2979FF';
+                        if (moduloId === 'C') canica.render.fillStyle = '#FFD700';
+
+                        // Evaluar lógica de desborde
+                        if (mod.conteoActual >= mod.limite && !mod.abierta) {
+                            accionarServo(moduloId);
+                        }
+                    }
                 }
             });
         });
