@@ -53,24 +53,25 @@
         const izq = Bodies.rectangle(330, 260, 20, 200, opcionesPared);
         const der = Bodies.rectangle(470, 260, 20, 200, opcionesPared);
 
-        // Agrupamos las piezas en un solo "Cuerpo Dinámico" ($m$ = 10 por defecto)
+        // Agrupamos las piezas en un solo "Cuerpo Dinámico"
         const contenedor = Body.create({
             parts: [base, izq, der],
             friction: 0.5,
-            mass: 10 
+            mass: 10,
+            inertia: Infinity  // <-- ¡MAGIA! Esto bloquea la rotación y el tambaleo ⚓
         });
 
         // ⚓ 2. El punto de anclaje (Estático e invisible arriba en el cielo)
         const ancla = Bodies.circle(400, 50, 10, { isStatic: true, render: { visible: false } });
 
-        // 🔗 3. El resorte (La Magia de la Gravedad)
+       // 🔗 3. El resorte (La Magia de la Gravedad)
         const resorte = Constraint.create({
             bodyA: ancla,
             bodyB: contenedor,
-            pointB: { x: 0, y: -80 }, // Conectamos el resorte a la parte superior del contenedor
-            stiffness: 0.03, // Constante elástica k (qué tan duro es el resorte)
-            damping: 0.08,   // Fricción para que no rebote eternamente
-            length: 150      // Longitud en reposo
+            pointB: { x: 0, y: -80 }, 
+            stiffness: 0.007, // <-- Antes era 0.03. Ahora es mucho más suave (aumentamos 'm') 📉
+            damping: 0.1,     // <-- Frena un poco el rebote para que se vea elegante
+            length: 150      
         });
         
         Composite.add(engine.world, [contenedor, ancla, resorte]);
