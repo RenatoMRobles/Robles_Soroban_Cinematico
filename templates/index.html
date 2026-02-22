@@ -6,7 +6,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
-            margin: 0; padding: 0; background-color: #0D0D0D; /* Aún más oscuro para resaltar los LEDs */
+            margin: 0; padding: 0; background-color: #0A0A0A;
             color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; overflow: hidden;
         }
@@ -28,24 +28,23 @@
 
         #escenario-wrapper { position: relative; width: 950px; height: 750px; }
         #canvas-container {
-            width: 100%; height: 100%; border: 1px solid #333;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.8); border-radius: 10px; background-color: transparent;
+            width: 100%; height: 100%; border: 1px solid #222;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; background-color: transparent;
         }
 
-        /* Displays Digitales LED adheridos a los contenedores */
+        /* Displays Digitales LED */
         .display-led {
             position: absolute;
             background: #000; border: 2px solid #333; border-radius: 5px;
-            color: #FF0000; font-family: 'Courier New', Courier, monospace;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 1.5em; font-weight: bold; text-align: center;
-            width: 60px; padding: 2px 0;
-            box-shadow: 0 0 10px rgba(255,0,0,0.3); z-index: 10;
+            width: 60px; padding: 2px 0; z-index: 10;
         }
         #led-U { left: 785px; top: 180px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
-        #led-D { left: 460px; top: 410px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
-        #led-C { left: 140px; top: 640px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
+        #led-D { left: 450px; top: 410px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
+        #led-C { left: 130px; top: 680px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
         
-        /* Indicadores de Servomotor (Se encienden cuando la compuerta se abre) */
+        /* Indicadores de Servomotor */
         .servo-status {
             position: absolute; width: 12px; height: 12px; border-radius: 50%;
             background: #333; border: 1px solid #111; z-index: 10; transition: background 0.2s;
@@ -58,11 +57,11 @@
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Computación Física con Sensores Laser y Servomotores</p>
+    <p class="sub">Computación Física con Sensores Laser Exactos</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanicas(1)">Inyectar +1 Micro-Canica</button>
-        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Probar Lote)</button>
+        <button class="btn-d" onclick="inyectarCanicas(10)">Inyectar +10 (Lote Completo)</button>
         <button class="btn-reset" onclick="limpiarMundo()">Limpiar Maqueta</button>
     </div>
 
@@ -87,15 +86,15 @@
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
             let ahora = audioCtx.currentTime;
             
-            if (tipo === 'drop') { // Clic mecánico
+            if (tipo === 'drop') { 
                 osc.type = 'square'; osc.frequency.setValueAtTime(900, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.03);
-                gainNode.gain.setValueAtTime(0.02, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.03);
+                gainNode.gain.setValueAtTime(0.01, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.03);
                 osc.start(ahora); osc.stop(ahora + 0.03);
-            } else if (tipo === 'servo') { // Sonido eléctrico de compuerta
+            } else if (tipo === 'servo') { 
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ahora); osc.frequency.linearRampToValueAtTime(100, ahora + 0.5);
                 gainNode.gain.setValueAtTime(0.08, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.5);
                 osc.start(ahora); osc.stop(ahora + 0.5);
-            } else if (tipo === 'beep') { // Beep del sensor láser
+            } else if (tipo === 'beep') { 
                 osc.type = 'sine'; osc.frequency.setValueAtTime(2000, ahora); 
                 gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.05);
                 osc.start(ahora); osc.stop(ahora + 0.05);
@@ -108,87 +107,84 @@
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 10; engine.velocityIterations = 10; // Extra precisión para micro-canicas
+        engine.positionIterations = 12; engine.velocityIterations = 12; // Máxima precisión anti-atascos
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
             options: { width: 950, height: 750, wireframes: false, background: 'transparent' }
         });
 
-        // --- ARQUITECTURA DE CASCADA CON SERVO-ESCOTILLAS ---
+        // --- ARQUITECTURA: CONTENEDORES DE CASCADA (SIN CUELLOS DE BOTELLA) ---
         const opPared = { isStatic: true, render: { fillStyle: '#444' } };
-        let modulos = {}; // Diccionario para controlar las cajas y compuertas
+        let modulos = {}; 
 
         function crearContenedor(id, x, y, width, height, limit, colorBase) {
-            // 1. Paredes Estáticas (Forman la caja cerrada)
+            // 1. Paredes Estáticas (Más anchas para asegurar caída libre)
             const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
             const paredDer = Bodies.rectangle(x + width/2, y, 15, height, opPared);
             
-            // 2. Techo con Embudo
-            const embudoIzq = Bodies.rectangle(x - width/2 + 10, y - height/2 - 15, width, 15, { isStatic: true, angle: Math.PI/6, render: { fillStyle: '#555' } });
-            const embudoDer = Bodies.rectangle(x + width/2 - 10, y - height/2 - 15, width, 15, { isStatic: true, angle: -Math.PI/6, render: { fillStyle: '#555' } });
+            // 2. Guías Exteriores (En lugar de embudos cerrados, paredes anchas que dirigen hacia adentro)
+            const guiaIzq = Bodies.rectangle(x - width/2 - 25, y - height/2 - 40, 80, 15, { isStatic: true, angle: Math.PI/3, render: { fillStyle: '#555' } });
+            const guiaDer = Bodies.rectangle(x + width/2 + 25, y - height/2 - 40, 80, 15, { isStatic: true, angle: -Math.PI/3, render: { fillStyle: '#555' } });
 
-            // 3. Sensor Digital Infrarrojo (Inmaterial, justo debajo del embudo)
-            const sensorLaser = Bodies.rectangle(x, y - height/2 + 10, width - 20, 10, { 
-                isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.2)' } 
+            // 3. Sensor Láser Infrarrojo (Inmaterial, cubre todo el ancho interior)
+            const sensorLaser = Bodies.rectangle(x, y - height/2 + 20, width - 15, 10, { 
+                isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            // 4. Escotilla Inferior (Dinámica, atada con bisagras)
-            // Está ligeramente inclinada para que las canicas salgan naturalmente a la rampa
+            // 4. Escotilla Inferior (Actúa como el servomotor)
             const escotilla = Bodies.rectangle(x, y + height/2, width - 5, 15, { render: { fillStyle: colorBase } });
             
-            // Bisagra izquierda (El Servomotor virtual)
             const bisagra = Constraint.create({
                 pointA: { x: x - width/2 + 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: -width/2 + 10, y: 0 },
                 stiffness: 1, length: 0, render: { visible: false }
             });
-            // Cerrojo derecho (Mantiene la puerta cerrada)
             const cerrojo = Constraint.create({
                 pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 10, y: 0 },
                 stiffness: 1, length: 0, render: { visible: false }
             });
 
-            Composite.add(engine.world, [paredIzq, paredDer, embudoIzq, embudoDer, sensorLaser, escotilla, bisagra, cerrojo]);
-
+            Composite.add(engine.world, [paredIzq, paredDer, guiaIzq, guiaDer, sensorLaser, escotilla, bisagra, cerrojo]);
             modulos[id] = { id, escotilla, cerrojo, limite: limit, conteoActual: 0, abierta: false };
         }
 
         // --- INSTANCIAR LOS MÓDULOS ---
-        // U: Unidades. Pequeña. Límite 10. (x: 820, y: 150)
-        crearContenedor('U', 820, 150, 70, 120, 10, '#00E676');
+        // U: Unidades. Límite exacto 10.
+        crearContenedor('U', 820, 150, 90, 120, 10, '#00E676'); // Ancho aumentado a 90 para evitar atascos
         
-        // D: Decenas. Mediana. Límite 100. (x: 500, y: 380)
-        crearContenedor('D', 500, 380, 100, 200, 100, '#2979FF');
+        // D: Decenas. Límite exacto 100.
+        crearContenedor('D', 480, 380, 120, 200, 100, '#2979FF'); // Ancho a 120
         
-        // C: Centenas. Grande. Depósito final. (x: 180, y: 600)
-        // Como es el depósito final, no tiene límite ni escotilla funcional por ahora, pero la construimos igual.
-        crearContenedor('C', 180, 600, 150, 250, 9999, '#FFD700');
+        // C: Centenas. Depósito final. (Movido más abajo para la cascada perfecta)
+        crearContenedor('C', 160, 650, 160, 250, 9999, '#FFD700');
 
-        // --- RAMPAS METÁLICAS GEOMÉTRICAS ---
-        // Rampa de U a D: Conecta la caída de U (820, 220) con el embudo de D (500, 250)
-        Composite.add(engine.world, Bodies.rectangle(660, 250, 360, 15, { isStatic: true, angle: 0.25, render: { fillStyle: '#666' } }));
+        // --- RAMPAS METÁLICAS GEOMÉTRICAS PERFECTAS ---
+        // Rampa de U a D (Inclinada hacia la IZQUIERDA: ángulo negativo)
+        // Centro X: (820+480)/2 = 650. Centro Y: aprox 240.
+        Composite.add(engine.world, Bodies.rectangle(650, 240, 380, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
         
-        // Rampa de D a C: Conecta la caída de D (500, 490) con el embudo de C (180, 440) -> Inclinación invertida
-        Composite.add(engine.world, Bodies.rectangle(340, 490, 360, 15, { isStatic: true, angle: 0.25, render: { fillStyle: '#666' } }));
+        // Rampa de D a C (Inclinada hacia la IZQUIERDA: ángulo negativo)
+        // Centro X: (480+160)/2 = 320. Centro Y: aprox 500.
+        Composite.add(engine.world, Bodies.rectangle(320, 500, 360, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
 
-        // --- LÓGICA DE INYECCIÓN ---
+        // --- LÓGICA DE INYECCIÓN LÍQUIDA ---
         let canicas = [];
         function inyectarCanicas(cantidad) {
             let inyectadas = 0;
+            // Intervalo más largo (100ms) para que caigan una por una sin chocar en el aire
             let intervalo = setInterval(() => {
                 reproducirSonido('drop');
-                // Caída aleatoria justo por encima del embudo de Unidades
-                let nuevaCanica = Bodies.circle(820 + (Math.random() * 20 - 10), -20, 6, { // Micro-canicas de radio 6
-                    restitution: 0.2, mass: 1, friction: 0.05, frictionAir: 0.005, render: { fillStyle: '#00E676' }
+                // Offset aleatorio suave y altura mayor para ganar velocidad terminal
+                let nuevaCanica = Bodies.circle(820 + (Math.random() * 30 - 15), -40, 6, { 
+                    restitution: 0.1, mass: 1, friction: 0.001, frictionAir: 0.002, render: { fillStyle: '#00E676' }
                 });
-                // Propiedad custom para evitar doble conteo en el mismo sensor
                 nuevaCanica.sensoresPasados = new Set();
                 canicas.push(nuevaCanica);
                 Composite.add(engine.world, nuevaCanica);
                 
                 inyectadas++;
                 if (inyectadas >= cantidad) clearInterval(intervalo);
-            }, 60); // Cadencia de disparo para evitar atascamientos
+            }, 100); 
         }
 
         function limpiarMundo() {
@@ -204,7 +200,7 @@
             document.getElementById('led-C').innerText = modulos['C'].conteoActual.toString().padStart(3, '0');
         }
 
-        // --- LÓGICA DEL SERVOMOTOR (LA ESCOTILLA) ---
+        // --- CEREBRO DIGITAL DEL SERVOMOTOR ---
         function accionarServo(id) {
             let mod = modulos[id];
             if (mod.abierta) return;
@@ -214,26 +210,24 @@
             let luzStatus = document.getElementById('servo-' + id);
             if(luzStatus) luzStatus.classList.add('servo-activo');
 
-            // Quitar el cerrojo para que la presión abra la puerta
+            // Abrir la compuerta
             Composite.remove(engine.world, mod.cerrojo);
 
-            // Temporizador: Darle 3 segundos para que se vacíe por completo
+            // Darle tiempo para que caiga todo el lote de canicas
             setTimeout(() => {
-                // Cinemática forzada para cerrar la puerta venciendo a las canicas lentas
+                // Forzar cierre cinemático
                 Body.setAngle(mod.escotilla, 0);
                 Body.setAngularVelocity(mod.escotilla, 0);
-                
-                // Reposicionar y re-soldar el cerrojo
                 Composite.add(engine.world, mod.cerrojo);
                 
                 if(luzStatus) luzStatus.classList.remove('servo-activo');
-                mod.conteoActual = 0; // Se resetea la caja
+                mod.conteoActual = 0; // Resetear el LED *después* de que se vacía
                 mod.abierta = false;
                 actualizarDisplays();
-            }, 3000);
+            }, 2500); // 2.5 segundos exactos
         }
 
-        // --- EL CEREBRO: SENSORES LÁSER INFRARROJOS ---
+        // --- SISTEMA DE SENSORES LÁSER ---
         Events.on(engine, 'collisionStart', function(event) {
             event.pairs.forEach(pair => {
                 let bodyA = pair.bodyA; let bodyB = pair.bodyB;
@@ -243,23 +237,22 @@
                 else if (bodyB.label && bodyB.label.startsWith('sensor_')) { sensor = bodyB; canica = bodyA; }
 
                 if (sensor && canica && canica.sensoresPasados) {
-                    let moduloId = sensor.label.split('_')[1]; // Extrae 'U', 'D', o 'C'
+                    let moduloId = sensor.label.split('_')[1]; 
                     
-                    // Si la canica no ha pasado por este sensor aún
                     if (!canica.sensoresPasados.has(moduloId)) {
-                        canica.sensoresPasados.add(moduloId); // Marcar como contada
+                        canica.sensoresPasados.add(moduloId); 
                         reproducirSonido('beep');
                         
                         let mod = modulos[moduloId];
                         mod.conteoActual++;
                         actualizarDisplays();
 
-                        // Cambio de color visual para saber en qué etapa están
+                        // Pintar la canica según la magnitud en la que acaba de entrar
                         if (moduloId === 'D') canica.render.fillStyle = '#2979FF';
                         if (moduloId === 'C') canica.render.fillStyle = '#FFD700';
 
-                        // Evaluar lógica de desborde
-                        if (mod.conteoActual >= mod.limite && !mod.abierta) {
+                        // 🎯 CONDICIÓN EXACTA DE APERTURA: Si llega a 10 (o 100)
+                        if (mod.conteoActual === mod.limite && !mod.abierta) {
                             accionarServo(moduloId);
                         }
                     }
