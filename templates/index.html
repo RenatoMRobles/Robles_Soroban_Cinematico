@@ -18,15 +18,10 @@
             font-family: 'Courier New', Courier, monospace; letter-spacing: 5px;
         }
 
-        /* Contenedor Principal Flex */
-        .layout-principal {
-            display: flex; gap: 30px; align-items: flex-start; margin-top: 10px;
-        }
+        .layout-principal { display: flex; gap: 30px; align-items: flex-start; margin-top: 10px; }
 
-        /* --- ESTILOS DEL ESCENARIO SOROBAN --- */
-        #escenario-wrapper {
-            display: flex; flex-direction: column; align-items: center;
-        }
+        /* --- SOROBAN --- */
+        #escenario-wrapper { display: flex; flex-direction: column; align-items: center; }
         .panel-control {
             display: flex; gap: 15px; margin-bottom: 15px; z-index: 20;
             background: #1A1A1A; padding: 12px 20px; border-radius: 12px;
@@ -68,7 +63,7 @@
 
         #iman-C { left: 115px; } #iman-D { left: 340px; } #iman-U { left: 565px; }
 
-        /* --- ESTILOS DE LA CALCULADORA CLÁSICA --- */
+        /* --- CALCULADORA --- */
         #calculadora {
             background: #1A1A1A; border: 1px solid #333; border-radius: 12px;
             padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
@@ -78,11 +73,11 @@
             background: #0A0A0A; border: 1px solid #444; border-radius: 8px;
             height: 60px; display: flex; align-items: center; justify-content: flex-end;
             padding: 0 15px; font-size: 2.5em; font-family: 'Courier New', Courier, monospace;
-            color: #E0E0E0; overflow: hidden;
+            color: #00E676; /* Verde digital */ overflow: hidden; transition: color 0.3s ease;
         }
-        .calc-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-        }
+        #calc-display.modo-total { color: #FFD700; /* Amarillo cuando muestra el total del Soroban */ }
+        
+        .calc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .btn-calc {
             background: #2A2A2A; border: 1px solid #444; border-radius: 8px;
             padding: 15px 0; font-size: 1.5em; color: #FFF; cursor: pointer; transition: 0.2s;
@@ -91,7 +86,8 @@
         .btn-calc-op { font-weight: bold; }
         .btn-suma { color: #00E676; border-color: #00E676; } .btn-suma:hover { background: #00E676; color: #121212; }
         .btn-resta { color: #FF5252; border-color: #FF5252; } .btn-resta:hover { background: #FF5252; color: #121212; }
-        .btn-clear { color: #FFD700; border-color: #FFD700; } .btn-clear:hover { background: #FFD700; color: #121212; }
+        .btn-clear { color: #BDBDBD; border-color: #BDBDBD; } .btn-clear:hover { background: #BDBDBD; color: #121212; }
+        .btn-back { color: #FF9800; border-color: #FF9800; } .btn-back:hover { background: #FF9800; color: #121212; }
         .col-span-2 { grid-column: span 2; }
     </style>
 </head>
@@ -130,7 +126,7 @@
         </div>
 
         <div id="calculadora">
-            <div id="calc-display">0</div>
+            <div id="calc-display" class="modo-total">0</div>
             <div class="calc-grid">
                 <button class="btn-calc" onclick="inputCalc(7)">7</button>
                 <button class="btn-calc" onclick="inputCalc(8)">8</button>
@@ -146,42 +142,64 @@
                 
                 <button class="btn-calc btn-clear" onclick="clearCalc()">C</button>
                 <button class="btn-calc" onclick="inputCalc(0)">0</button>
-                <button class="btn-calc btn-calc-op btn-suma" onclick="ejecutarCalc('SUMA')">+</button>
+                <button class="btn-calc btn-back" onclick="backspaceCalc()">⌫</button>
                 
-                <button class="btn-calc btn-calc-op btn-resta col-span-2" onclick="ejecutarCalc('RESTA')">-</button>
+                <button class="btn-calc btn-calc-op btn-suma col-span-2" onclick="ejecutarCalc('SUMA')">+</button>
+                <button class="btn-calc btn-calc-op btn-resta" onclick="ejecutarCalc('RESTA')">-</button>
             </div>
         </div>
 
     </div>
 
     <script>
-        // --- LOGICA DE LA CALCULADORA CLASICA ---
+        // --- MEMORIA GLOBAL ---
+        let valorTotal = 0;
+
+        // --- LÓGICA DE LA CALCULADORA INTELIGENTE ---
         let calcBuffer = "";
+        let calcModoInput = false; // Indica si el usuario está tecleando un número nuevo
         
         function actualizarDisplayCalc() {
-            document.getElementById('calc-display').innerText = calcBuffer === "" ? "0" : calcBuffer;
+            const display = document.getElementById('calc-display');
+            if (calcModoInput) {
+                display.innerText = calcBuffer === "" ? "0" : calcBuffer;
+                display.classList.remove('modo-total');
+            } else {
+                display.innerText = valorTotal.toString();
+                display.classList.add('modo-total');
+            }
         }
 
         function inputCalc(num) {
-            if (calcBuffer.length >= 3) return; // Limitar a 3 digitos (999)
+            calcModoInput = true;
+            if (calcBuffer.length >= 3) return; // Soroban maneja hasta 999
             calcBuffer += num.toString();
+            actualizarDisplayCalc();
+        }
+
+        function backspaceCalc() {
+            if (!calcModoInput) return;
+            calcBuffer = calcBuffer.slice(0, -1);
+            if (calcBuffer === "") calcModoInput = false; // Vuelve a mostrar el total
             actualizarDisplayCalc();
         }
 
         function clearCalc() {
             calcBuffer = "";
+            calcModoInput = false;
             actualizarDisplayCalc();
         }
 
         function ejecutarCalc(operacion) {
-            if (calcBuffer === "") return;
+            if (!calcModoInput || calcBuffer === "") return;
             let cantidad = parseInt(calcBuffer);
-            if (cantidad === 0) return;
-
+            
             let delta = operacion === 'SUMA' ? cantidad : -cantidad;
             procesarCambioGlobal(valorTotal + delta);
             
-            clearCalc(); // Reiniciar display despues de la inyeccion
+            calcBuffer = "";
+            calcModoInput = false;
+            actualizarDisplayCalc(); 
         }
 
         // --- AUDIO CORPORATIVO ---
@@ -189,11 +207,9 @@
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
             let ahora = audioCtx.currentTime;
-
             if (tipo === 'add') {
                 osc.type = 'sine'; osc.frequency.setValueAtTime(600, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.1);
                 gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.1);
@@ -209,49 +225,54 @@
             }
         }
 
+        // --- MOTOR FÍSICO ---
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
               Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, Composite = Matter.Composite;
 
         const engine = Engine.create();
+        
+        // Mejoramos la precisión cuántica del motor para evitar fallas
+        engine.positionIterations = 8; 
+        engine.velocityIterations = 8;
+
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
             options: { width: 750, height: 450, wireframes: false, background: 'transparent' }
         });
 
         const opPared = { render: { fillStyle: '#333' } };
-        const opInvis = { render: { visible: false } }; // 🛡️ Material Invisible para Barreras
 
-        // 🛡️ FIX DEFINITIVO: Contenedores con Barreras de Contención Invisibles Hacia Arriba
+        // 🛡️ SOLUCIÓN PURISTA: Embudos Invisibles anclados al mundo, NO al contenedor.
         function crearColumna(x) {
+            // 1. El contenedor dinámico (Centro de gravedad perfecto)
             const base = Bodies.rectangle(x, 340, 140, 30, opPared); 
             const izq = Bodies.rectangle(x - 60, 240, 20, 230, opPared); 
             const der = Bodies.rectangle(x + 60, 240, 20, 230, opPared);
+            const contenedor = Body.create({ parts: [base, izq, der], friction: 0.8, mass: 10, inertia: Infinity });
             
-            // 🛡️ BARRERAS INVISIBLES: Cierran el túnel cuántico para que ninguna canica escape al saltar
-            const izqArriba = Bodies.rectangle(x - 60, -20, 20, 300, opInvis);
-            const derArriba = Bodies.rectangle(x + 60, -20, 20, 300, opInvis);
-
-            // Fusionamos todo en un solo cuerpo rígido inquebrantable
-            const contenedor = Body.create({ parts: [base, izq, der, izqArriba, derArriba], friction: 0.8, mass: 10, inertia: Infinity });
-            
+            // 2. Resorte de Gravedad
             const ancla = Bodies.circle(x, 20, 10, { isStatic: true, render: { visible: false } });
             const resorte = Constraint.create({
                 bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -90 }, 
                 stiffness: 0.007, damping: 0.1, length: 150      
             });
-            Composite.add(engine.world, [contenedor, ancla, resorte]);
+
+            // 3. Embudos Inquebrantables Estáticos (Evitan que caigan al vacío, sin hundir la caja)
+            const embudoIzq = Bodies.rectangle(x - 60, 40, 20, 180, { isStatic: true, render: { visible: false } });
+            const embudoDer = Bodies.rectangle(x + 60, 40, 20, 180, { isStatic: true, render: { visible: false } });
+
+            Composite.add(engine.world, [contenedor, ancla, resorte, embudoIzq, embudoDer]);
         }
 
-        // Posiciones ajustadas para el lienzo de 750px
         crearColumna(150); crearColumna(375); crearColumna(600); 
 
-        // 🧠 MEMORIA LÓGICA DIFERENCIAL
-        let valorTotal = 0;
+        // --- ESTADO FÍSICO DIFERENCIAL ---
         let estadoFisico = { C: {v5: 0, v1: 0}, D: {v5: 0, v1: 0}, U: {v5: 0, v1: 0} };
         let canicasCuerpos = []; 
 
         function actualizarMarcador() {
             document.getElementById('marcador').innerText = valorTotal.toString().padStart(3, '0');
+            actualizarDisplayCalc(); // Sincronizamos la calculadora
         }
 
         function animarImanVisual(columna) {
@@ -265,33 +286,32 @@
         function limpiarSoroban() {
             if (valorTotal === 0) return;
             reproducirSonido('sub'); animarImanVisual('ALL');
-            
             canicasCuerpos.forEach(c => {
                 Matter.Body.applyForce(c, c.position, { x: 0, y: -0.09 * c.mass });
                 setTimeout(() => Composite.remove(engine.world, c), 500);
             });
             canicasCuerpos = [];
             estadoFisico = { C: {v5:0, v1:0}, D: {v5:0, v1:0}, U: {v5:0, v1:0} };
-            valorTotal = 0; actualizarMarcador();
+            valorTotal = 0; 
+            clearCalc(); // Resetea también la calculadora
         }
 
         function crearCanicaFisica(columna, valorMag, offsetY = 0) {
             let x = columna === 'U' ? 600 : (columna === 'D' ? 375 : 150);
-            x = x + (Math.random() * 8 - 4); 
+            x = x + (Math.random() * 4 - 2); 
             
             let radio = valorMag === 1 ? 15 : 30;
             let masa = valorMag === 1 ? 2 : 10;
             let color = '#FFF';
-
             if (columna === 'U') color = valorMag === 1 ? '#00E676' : '#FF4081'; 
             if (columna === 'D') color = valorMag === 1 ? '#2979FF' : '#B388FF'; 
             if (columna === 'C') color = valorMag === 1 ? '#FFD700' : '#FF6D00'; 
 
-            let nuevaCanica = Bodies.circle(x, -20 - offsetY, radio, { 
-                restitution: 0.3, mass: masa, frictionAir: 0.015, render: { fillStyle: color } 
+            // Aparecen dentro del embudo estático seguro
+            let nuevaCanica = Bodies.circle(x, 20 - offsetY, radio, { 
+                restitution: 0.2, mass: masa, frictionAir: 0.015, render: { fillStyle: color } 
             });
             nuevaCanica.customType = columna + valorMag;
-            
             canicasCuerpos.push(nuevaCanica); 
             Composite.add(engine.world, nuevaCanica);
         }
@@ -304,20 +324,18 @@
                 let dropOffset = 0;
                 for(let i=0; i < diferencia; i++) {
                     crearCanicaFisica(columna, valorFicha, dropOffset);
-                    dropOffset += 45; 
+                    dropOffset += 50; 
                 }
             } else if (diferencia < 0) {
                 let cantidadARemover = Math.abs(diferencia);
                 let removidas = 0;
                 animarImanVisual(columna);
-
                 for (let i = canicasCuerpos.length - 1; i >= 0; i--) {
                     let c = canicasCuerpos[i];
                     if (c.customType === typeStr) {
                         Matter.Body.applyForce(c, c.position, { x: 0, y: -0.09 * c.mass });
                         canicasCuerpos.splice(i, 1);
                         setTimeout(() => Composite.remove(engine.world, c), 500);
-
                         removidas++;
                         if (removidas === cantidadARemover) break;
                     }
@@ -325,12 +343,10 @@
             }
         }
 
-        // 🧠 MOTOR DIFERENCIAL UNIVERSAL
-        // Esta funcion ahora es el cerebro. Recibe el nuevo total y recalcula todo.
         function procesarCambioGlobal(totalProyectado) {
             if (totalProyectado < 0) totalProyectado = 0; 
             if (totalProyectado > 999) totalProyectado = 999;
-            if (totalProyectado === valorTotal) return; // Si no hay cambio, no gastar CPU
+            if (totalProyectado === valorTotal) return; 
 
             let esSuma = totalProyectado > valorTotal;
             reproducirSonido(esSuma ? 'add' : 'sub');
@@ -362,7 +378,6 @@
             estadoFisico = nuevoEstadoFisico;
         }
 
-        // Las viejas llamadas manuales ahora alimentan al Motor Diferencial
         function operarColumna(columna, valorPresionado) {
             let mult = columna === 'C' ? 100 : (columna === 'D' ? 10 : 1);
             procesarCambioGlobal(valorTotal + (valorPresionado * mult));
