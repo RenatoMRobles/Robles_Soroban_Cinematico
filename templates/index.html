@@ -34,30 +34,28 @@
 
         /* Displays Digitales LED */
         .display-led {
-            position: absolute;
-            background: #000; border: 2px solid #333; border-radius: 5px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.5em; font-weight: bold; text-align: center;
-            width: 60px; padding: 2px 0; z-index: 10;
+            position: absolute; background: #000; border: 2px solid #333; border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace; font-size: 1.5em; font-weight: bold; 
+            text-align: center; width: 60px; padding: 2px 0; z-index: 10;
         }
         #led-U { left: 785px; top: 180px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
         #led-D { left: 450px; top: 410px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
         #led-C { left: 130px; top: 680px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
         
-        /* Indicadores de Servomotor */
+        /* Indicadores de Servomotor (Movidos al lado DERECHO donde ahora están las bisagras) */
         .servo-status {
-            position: absolute; width: 12px; height: 12px; border-radius: 50%;
+            position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #333; border: 1px solid #111; z-index: 10; transition: background 0.2s;
         }
-        .servo-activo { background: #FF3D00; box-shadow: 0 0 15px #FF3D00; }
+        .servo-activo { background: #FF3D00; box-shadow: 0 0 20px #FF3D00; }
         
-        #servo-U { left: 755px; top: 220px; }
-        #servo-D { left: 410px; top: 480px; }
+        #servo-U { left: 875px; top: 205px; } 
+        #servo-D { left: 550px; top: 475px; }
     </style>
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Computación Física con Sensores Laser Exactos</p>
+    <p class="sub">Sellado Hermético y Vaciado Direccional</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanicas(1)">Inyectar +1 Micro-Canica</button>
@@ -101,80 +99,74 @@
             }
         }
 
-        // --- MOTOR FÍSICO DE ALTA PRECISIÓN ---
+        // --- MOTOR FÍSICO ---
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
               Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, 
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 12; engine.velocityIterations = 12; // Máxima precisión anti-atascos
+        engine.positionIterations = 10; engine.velocityIterations = 10;
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
             options: { width: 950, height: 750, wireframes: false, background: 'transparent' }
         });
 
-        // --- ARQUITECTURA: CONTENEDORES DE CASCADA (SIN CUELLOS DE BOTELLA) ---
+        // --- ARQUITECTURA: CONTENEDORES DE CASCADA BLINDADOS ---
         const opPared = { isStatic: true, render: { fillStyle: '#444' } };
         let modulos = {}; 
 
         function crearContenedor(id, x, y, width, height, limit, colorBase) {
-            // 1. Paredes Estáticas (Más anchas para asegurar caída libre)
             const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
             const paredDer = Bodies.rectangle(x + width/2, y, 15, height, opPared);
             
-            // 2. Guías Exteriores (En lugar de embudos cerrados, paredes anchas que dirigen hacia adentro)
             const guiaIzq = Bodies.rectangle(x - width/2 - 25, y - height/2 - 40, 80, 15, { isStatic: true, angle: Math.PI/3, render: { fillStyle: '#555' } });
             const guiaDer = Bodies.rectangle(x + width/2 + 25, y - height/2 - 40, 80, 15, { isStatic: true, angle: -Math.PI/3, render: { fillStyle: '#555' } });
 
-            // 3. Sensor Láser Infrarrojo (Inmaterial, cubre todo el ancho interior)
             const sensorLaser = Bodies.rectangle(x, y - height/2 + 20, width - 15, 10, { 
                 isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            // 4. Escotilla Inferior (Actúa como el servomotor)
-            const escotilla = Bodies.rectangle(x, y + height/2, width - 5, 15, { render: { fillStyle: colorBase } });
-            
-            const bisagra = Constraint.create({
-                pointA: { x: x - width/2 + 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: -width/2 + 10, y: 0 },
-                stiffness: 1, length: 0, render: { visible: false }
+            // 🛡️ FIX 1: ESCOTILLA ESTÁTICA Y SOBREDIMENSIONADA. 
+            // Es un 10% más ancha para solaparse con las paredes y bloquear cualquier fuga.
+            const escotilla = Bodies.rectangle(x, y + height/2, width + 10, 20, { 
+                isStatic: true, // Esto la hace impenetrable
+                render: { fillStyle: colorBase } 
             });
-            const cerrojo = Constraint.create({
-                pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 10, y: 0 },
+            
+            // 🔧 FIX 2: BISAGRA A LA DERECHA (Para que caiga hacia la Izquierda)
+            // Aunque es estática, preparamos la bisagra para cuando la activemos
+            const bisagra = Constraint.create({
+                pointA: { x: x + width/2 - 5, y: y + height/2 }, // Punto de anclaje a la derecha
+                bodyB: escotilla, 
+                pointB: { x: width/2 - 5, y: 0 }, 
                 stiffness: 1, length: 0, render: { visible: false }
             });
 
-            Composite.add(engine.world, [paredIzq, paredDer, guiaIzq, guiaDer, sensorLaser, escotilla, bisagra, cerrojo]);
-            modulos[id] = { id, escotilla, cerrojo, limite: limit, conteoActual: 0, abierta: false };
+            Composite.add(engine.world, [paredIzq, paredDer, guiaIzq, guiaDer, sensorLaser, escotilla, bisagra]);
+            
+            // Guardamos coordenadas originales para forzar el cierre perfecto después
+            modulos[id] = { 
+                id, escotilla, limite: limit, conteoActual: 0, abierta: false, 
+                origX: x, origY: y + height/2 
+            };
         }
 
         // --- INSTANCIAR LOS MÓDULOS ---
-        // U: Unidades. Límite exacto 10.
-        crearContenedor('U', 820, 150, 90, 120, 10, '#00E676'); // Ancho aumentado a 90 para evitar atascos
-        
-        // D: Decenas. Límite exacto 100.
-        crearContenedor('D', 480, 380, 120, 200, 100, '#2979FF'); // Ancho a 120
-        
-        // C: Centenas. Depósito final. (Movido más abajo para la cascada perfecta)
-        crearContenedor('C', 160, 650, 160, 250, 9999, '#FFD700');
+        crearContenedor('U', 820, 150, 90, 120, 10, '#00E676'); 
+        crearContenedor('D', 480, 380, 120, 200, 100, '#2979FF'); 
+        crearContenedor('C', 160, 650, 160, 250, 9999, '#FFD700'); // Final
 
-        // --- RAMPAS METÁLICAS GEOMÉTRICAS PERFECTAS ---
-        // Rampa de U a D (Inclinada hacia la IZQUIERDA: ángulo negativo)
-        // Centro X: (820+480)/2 = 650. Centro Y: aprox 240.
+        // --- RAMPAS METÁLICAS ---
         Composite.add(engine.world, Bodies.rectangle(650, 240, 380, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
-        
-        // Rampa de D a C (Inclinada hacia la IZQUIERDA: ángulo negativo)
-        // Centro X: (480+160)/2 = 320. Centro Y: aprox 500.
         Composite.add(engine.world, Bodies.rectangle(320, 500, 360, 15, { isStatic: true, angle: -0.28, render: { fillStyle: '#666' } }));
 
         // --- LÓGICA DE INYECCIÓN LÍQUIDA ---
         let canicas = [];
         function inyectarCanicas(cantidad) {
             let inyectadas = 0;
-            // Intervalo más largo (100ms) para que caigan una por una sin chocar en el aire
             let intervalo = setInterval(() => {
                 reproducirSonido('drop');
-                // Offset aleatorio suave y altura mayor para ganar velocidad terminal
                 let nuevaCanica = Bodies.circle(820 + (Math.random() * 30 - 15), -40, 6, { 
                     restitution: 0.1, mass: 1, friction: 0.001, frictionAir: 0.002, render: { fillStyle: '#00E676' }
                 });
@@ -184,7 +176,7 @@
                 
                 inyectadas++;
                 if (inyectadas >= cantidad) clearInterval(intervalo);
-            }, 100); 
+            }, 80); 
         }
 
         function limpiarMundo() {
@@ -210,18 +202,20 @@
             let luzStatus = document.getElementById('servo-' + id);
             if(luzStatus) luzStatus.classList.add('servo-activo');
 
-            // Abrir la compuerta
-            Composite.remove(engine.world, mod.cerrojo);
+            // 🔓 ABRIR: Convertir en dinámica. La bisagra derecha la sostiene, el lado izquierdo colapsa.
+            Body.setStatic(mod.escotilla, false);
 
             // Darle tiempo para que caiga todo el lote de canicas
             setTimeout(() => {
-                // Forzar cierre cinemático
+                // 🔒 CERRAR: Forzar la posición original y convertirla en estática impenetrable de nuevo.
+                Body.setStatic(mod.escotilla, true);
+                Body.setPosition(mod.escotilla, { x: mod.origX, y: mod.origY });
+                Body.setVelocity(mod.escotilla, { x: 0, y: 0 });
                 Body.setAngle(mod.escotilla, 0);
                 Body.setAngularVelocity(mod.escotilla, 0);
-                Composite.add(engine.world, mod.cerrojo);
                 
                 if(luzStatus) luzStatus.classList.remove('servo-activo');
-                mod.conteoActual = 0; // Resetear el LED *después* de que se vacía
+                mod.conteoActual = 0; // Resetear LED
                 mod.abierta = false;
                 actualizarDisplays();
             }, 2500); // 2.5 segundos exactos
@@ -247,11 +241,10 @@
                         mod.conteoActual++;
                         actualizarDisplays();
 
-                        // Pintar la canica según la magnitud en la que acaba de entrar
                         if (moduloId === 'D') canica.render.fillStyle = '#2979FF';
                         if (moduloId === 'C') canica.render.fillStyle = '#FFD700';
 
-                        // 🎯 CONDICIÓN EXACTA DE APERTURA: Si llega a 10 (o 100)
+                        // 🎯 CONDICIÓN EXACTA DE APERTURA
                         if (mod.conteoActual === mod.limite && !mod.abierta) {
                             accionarServo(moduloId);
                         }
