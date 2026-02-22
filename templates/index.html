@@ -30,8 +30,8 @@
         <button onclick="agregarCanica(5)">+5 Unidades (Tombolocha)</button>
     </div>
     <div id="canvas-container"></div>
-    <<script>
-        // Inicialización ampliada por Elena 🏃‍♀️💨 (Agregamos Body y Constraint)
+    <script>
+        // Inicialización y físicas por el equipo Robles y Robles 🏢✨
         const Engine = Matter.Engine, 
               Render = Matter.Render, 
               Runner = Matter.Runner, 
@@ -47,67 +47,101 @@
             options: { width: 800, height: 600, wireframes: false, background: 'transparent' }
         });
 
-        // 🏗️ 1. Construir las piezas del contenedor
         const opcionesPared = { render: { fillStyle: '#333' } };
-        const base = Bodies.rectangle(400, 350, 160, 20, opcionesPared);
-        const izq = Bodies.rectangle(330, 260, 20, 200, opcionesPared);
-        const der = Bodies.rectangle(470, 260, 20, 200, opcionesPared);
 
-        // Agrupamos las piezas en un solo "Cuerpo Dinámico"
-        const contenedor = Body.create({
-            parts: [base, izq, der],
-            friction: 0.5,
-            mass: 10,
-            inertia: Infinity  // <-- ¡MAGIA! Esto bloquea la rotación y el tambaleo ⚓
+        // ==========================================
+        // 🏛️ 1. COLUMNA DE UNIDADES (Derecha)
+        // ==========================================
+        const baseU = Bodies.rectangle(550, 350, 160, 20, opcionesPared);
+        const izqU = Bodies.rectangle(480, 260, 20, 200, opcionesPared);
+        const derU = Bodies.rectangle(620, 260, 20, 200, opcionesPared);
+
+        const contenedorUnidades = Body.create({
+            parts: [baseU, izqU, derU], friction: 0.5, mass: 10, inertia: Infinity 
         });
 
-        // ⚓ 2. El punto de anclaje (Estático e invisible arriba en el cielo)
-        const ancla = Bodies.circle(400, 50, 10, { isStatic: true, render: { visible: false } });
-
-       // 🔗 3. El resorte (La Magia de la Gravedad)
-        const resorte = Constraint.create({
-            bodyA: ancla,
-            bodyB: contenedor,
-            pointB: { x: 0, y: -80 }, 
-            stiffness: 0.007, // <-- Antes era 0.03. Ahora es mucho más suave (aumentamos 'm') 📉
-            damping: 0.1,     // <-- Frena un poco el rebote para que se vea elegante
-            length: 150      
+        const anclaU = Bodies.circle(550, 50, 10, { isStatic: true, render: { visible: false } });
+        const resorteUnidades = Constraint.create({
+            bodyA: anclaU, bodyB: contenedorUnidades, pointB: { x: 0, y: -80 }, 
+            stiffness: 0.007, damping: 0.1, length: 150      
         });
+
+        // ==========================================
+        // 🏛️ 2. COLUMNA DE DECENAS (Izquierda)
+        // ==========================================
+        const baseD = Bodies.rectangle(250, 350, 160, 20, opcionesPared);
+        const izqD = Bodies.rectangle(180, 260, 20, 200, opcionesPared);
+        const derD = Bodies.rectangle(320, 260, 20, 200, opcionesPared);
+
+        const contenedorDecenas = Body.create({
+            parts: [baseD, izqD, derD], friction: 0.5, mass: 10, inertia: Infinity 
+        });
+
+        const anclaD = Bodies.circle(250, 50, 10, { isStatic: true, render: { visible: false } });
+        const resorteDecenas = Constraint.create({
+            bodyA: anclaD, bodyB: contenedorDecenas, pointB: { x: 0, y: -80 }, 
+            stiffness: 0.007, damping: 0.1, length: 150      
+        });
+
+        // Agregamos ambas infraestructuras al mundo
+        Composite.add(engine.world, [
+            contenedorUnidades, anclaU, resorteUnidades,
+            contenedorDecenas, anclaD, resorteDecenas
+        ]);
         
-        Composite.add(engine.world, [contenedor, ancla, resorte]);
-        
+        // Variables de estado
         let contadorUnidades = 0;
-        let canicasActivas = []; // Llevamos un registro de las canicas físicas
+        let contadorDecenas = 0;
+        let canicasUnidades = []; 
+        let canicasDecenas = []; 
+
+        // Función modular para crear canicas visuales
+        function crearCanicaFisica(columna, valor) {
+            let x = columna === 'unidades' ? 550 : 250;
+            // 1 = verde (15px), 5 = rosa (30px), 10 = azul corporativo (35px)
+            let radio = valor === 1 ? 15 : (valor === 5 ? 30 : 35); 
+            let color = valor === 1 ? '#00E676' : (valor === 5 ? '#FF4081' : '#2979FF'); 
+            let masa = valor === 1 ? 2 : (valor === 5 ? 10 : 20); 
+
+            let nuevaCanica = Bodies.circle(x, 80, radio, { 
+                restitution: 0.5, mass: masa, render: { fillStyle: color } 
+            });
+
+            if(columna === 'unidades') canicasUnidades.push(nuevaCanica);
+            else canicasDecenas.push(nuevaCanica);
+
+            Composite.add(engine.world, nuevaCanica);
+        }
 
         function agregarCanica(valor) {
             contadorUnidades += valor;
             
-            // LÓGICA DE DESBORDE (Al llegar a 10)
-            if (contadorUnidades >= 10) {
-                console.log("¡Límite alcanzado! Extrayendo unidades...");
-                
-                // Solo eliminamos las canicas, ¡no el contenedor!
-                canicasActivas.forEach(c => Composite.remove(engine.world, c));
-                canicasActivas = []; // Vaciamos el registro
-                contadorUnidades = contadorUnidades - 10;
-                
-                // ¡Al quitar el peso, verás el contenedor rebotar hacia arriba maravillosamente! 🎈
-                return;
-            }
+            // 1. Instanciar la canica visualmente
+            crearCanicaFisica('unidades', valor);
 
-            // Generar la canica con masa equivalente a su valor
-            let radio = valor === 1 ? 15 : 30;
-            let color = valor === 1 ? '#00E676' : '#FF4081';
-            let masa = valor === 1 ? 2 : 10; // La tombolocha pesa 5 veces más
-            
-            let nuevaCanica = Bodies.circle(400, 100, radio, { 
-                restitution: 0.5, 
-                mass: masa,
-                render: { fillStyle: color } 
-            });
-            
-            canicasActivas.push(nuevaCanica); // Guardamos referencia
-            Composite.add(engine.world, nuevaCanica);
+            // 2. Verificar si rompimos la barrera del 10
+            if (contadorUnidades >= 10) {
+                // El setTimeout crea un suspenso visual de medio segundo antes de agrupar
+                setTimeout(() => {
+                    console.log("¡Límite alcanzado! Transfiriendo masa a las Decenas...");
+                    
+                    let excedente = contadorUnidades - 10;
+                    
+                    // Pulverizar las unidades físicas actuales (El rebote será glorioso)
+                    canicasUnidades.forEach(c => Composite.remove(engine.world, c));
+                    canicasUnidades = [];
+                    contadorUnidades = excedente;
+                    
+                    // Instanciar 1 canica en la columna de DECENAS
+                    contadorDecenas += 10; 
+                    crearCanicaFisica('decenas', 10);
+
+                    // Recrear las canicas sobrantes en unidades (Si metiste un 5 teniendo un 9, te sobran 4)
+                    for(let i = 0; i < excedente; i++) {
+                        crearCanicaFisica('unidades', 1);
+                    }
+                }, 600); // 600 milisegundos de gracia 🕒
+            }
         }
 
         Render.run(render);
