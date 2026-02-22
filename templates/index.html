@@ -23,7 +23,6 @@
             box-shadow: 0 0 25px rgba(0, 230, 118, 0.15); border-radius: 10px;
         }
         
-        /* Tablero de Mando Expandido */
         .panel-control {
             display: flex; gap: 20px; margin-bottom: 10px;
             background: #1A1A1A; padding: 15px 25px; border-radius: 12px;
@@ -38,12 +37,10 @@
             border-radius: 6px; cursor: pointer; transition: all 0.2s ease; font-weight: bold; font-size: 1em;
         }
         
-        /* Botones de SUMA */
         .btn-u { color: #00E676; border-color: #00E676; } .btn-u:hover { background-color: #00E676; color: #121212; }
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
         .btn-c { color: #FFD700; border-color: #FFD700; } .btn-c:hover { background-color: #FFD700; color: #121212; }
 
-        /* Botones de RESTA (Dark Red) */
         .btn-sub { color: #FF5252; border-color: #FF5252; opacity: 0.8;}
         .btn-sub:hover { background-color: #FF5252; color: #121212; opacity: 1;}
 
@@ -95,7 +92,6 @@
     <div id="canvas-container"></div>
 
     <script>
-        // --- SINTETIZADOR DE AUDIO CORPORATIVO ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -104,34 +100,23 @@
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-
             let ahora = audioCtx.currentTime;
+
             if (tipo === 'add') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, ahora);
-                osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.1);
-                gainNode.gain.setValueAtTime(0.1, ahora);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.1);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ahora); osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.1);
+                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.1);
                 osc.start(ahora); osc.stop(ahora + 0.1);
             } else if (tipo === 'sub') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, ahora);
-                osc.frequency.exponentialRampToValueAtTime(150, ahora + 0.15);
-                gainNode.gain.setValueAtTime(0.1, ahora);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.15);
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, ahora); osc.frequency.exponentialRampToValueAtTime(150, ahora + 0.15);
+                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.exponentialRampToValueAtTime(0.01, ahora + 0.15);
                 osc.start(ahora); osc.stop(ahora + 0.15);
             } else if (tipo === 'magia') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, ahora);
-                osc.frequency.setValueAtTime(1200, ahora + 0.1);
-                osc.frequency.setValueAtTime(1600, ahora + 0.2);
-                gainNode.gain.setValueAtTime(0.1, ahora);
-                gainNode.gain.linearRampToValueAtTime(0, ahora + 0.3);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, ahora); osc.frequency.setValueAtTime(1200, ahora + 0.1); osc.frequency.setValueAtTime(1600, ahora + 0.2);
+                gainNode.gain.setValueAtTime(0.1, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.3);
                 osc.start(ahora); osc.stop(ahora + 0.3);
             }
         }
 
-        // --- MOTOR FÍSICO Y LÓGICA DE MATRICES ---
         const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner, 
               Bodies = Matter.Bodies, Body = Matter.Body, Constraint = Matter.Constraint, 
               Composite = Matter.Composite;
@@ -145,14 +130,15 @@
 
         const opPared = { render: { fillStyle: '#333' } };
 
+        // 🛠️ FIX 1: Paredes más altas para evitar que las canicas caigan al vacío
         function crearColumna(x) {
-            const base = Bodies.rectangle(x, 300, 140, 20, opPared);
-            const izq = Bodies.rectangle(x - 60, 210, 20, 200, opPared);
-            const der = Bodies.rectangle(x + 60, 210, 20, 200, opPared);
+            const base = Bodies.rectangle(x, 320, 140, 20, opPared);
+            const izq = Bodies.rectangle(x - 60, 180, 20, 300, opPared); // Paredes más largas
+            const der = Bodies.rectangle(x + 60, 180, 20, 300, opPared);
             const contenedor = Body.create({ parts: [base, izq, der], friction: 0.5, mass: 10, inertia: Infinity });
-            const ancla = Bodies.circle(x, -10, 10, { isStatic: true, render: { visible: false } });
+            const ancla = Bodies.circle(x, -20, 10, { isStatic: true, render: { visible: false } });
             const resorte = Constraint.create({
-                bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -80 }, 
+                bodyA: ancla, bodyB: contenedor, pointB: { x: 0, y: -120 }, 
                 stiffness: 0.007, damping: 0.1, length: 150      
             });
             Composite.add(engine.world, [contenedor, ancla, resorte]);
@@ -160,7 +146,6 @@
 
         crearColumna(150); crearColumna(400); crearColumna(650); 
 
-        // Variables de Lógica
         let valU = 0, valD = 0, valC = 0;
         let canicasCuerpos = []; 
 
@@ -171,14 +156,22 @@
 
         function limpiarSoroban() {
             reproducirSonido('sub');
-            canicasCuerpos.forEach(c => Composite.remove(engine.world, c));
-            canicasCuerpos = [];
-            valU = 0; valD = 0; valC = 0;
-            actualizarMarcador();
+            aplicarImanMagnetico('ALL');
+            setTimeout(() => {
+                canicasCuerpos.forEach(c => Composite.remove(engine.world, c));
+                canicasCuerpos = [];
+                valU = 0; valD = 0; valC = 0;
+                actualizarMarcador();
+            }, 500);
         }
 
-        function crearCanicaFisica(columna, valorMag) {
+        // 🛠️ FIX 2: Offset en Y para evitar que choquen al nacer y exploten
+        function crearCanicaFisica(columna, valorMag, offsetY = 0) {
             let x = columna === 'U' ? 650 : (columna === 'D' ? 400 : 150);
+            
+            // Un pequeño offset aleatorio en X para que se acomoden más natural
+            x = x + (Math.random() * 10 - 5); 
+
             let radio = valorMag === 1 ? 15 : 30;
             let masa = valorMag === 1 ? 2 : 10;
             let color = '#FFF';
@@ -187,12 +180,25 @@
             if (columna === 'D') color = valorMag === 1 ? '#2979FF' : '#B388FF'; 
             if (columna === 'C') color = valorMag === 1 ? '#FFD700' : '#FF6D00'; 
 
-            let nuevaCanica = Bodies.circle(x, 50, radio, { restitution: 0.5, mass: masa, render: { fillStyle: color } });
+            // Redujimos la restitución (rebote) de 0.5 a 0.2 para que no salten tanto
+            let nuevaCanica = Bodies.circle(x, -50 - offsetY, radio, { restitution: 0.2, mass: masa, friction: 0.01, render: { fillStyle: color } });
             canicasCuerpos.push(nuevaCanica);
             Composite.add(engine.world, nuevaCanica);
         }
 
-        // LÓGICA MAESTRA DE SUSTRACCIÓN Y PRESTAMOS
+        // 🧲 FIX 3: La función de Ingraved / Imán
+        function aplicarImanMagnetico(columnaAfectada) {
+            let xCentro = columnaAfectada === 'U' ? 650 : (columnaAfectada === 'D' ? 400 : (columnaAfectada === 'C' ? 150 : -1));
+            
+            canicasCuerpos.forEach(c => {
+                // Si es ALL, o si la canica pertenece a la columna afectada (margen de 70px)
+                if (columnaAfectada === 'ALL' || Math.abs(c.position.x - xCentro) < 70) {
+                    // Aplicar fuerza anti-gravedad hacia arriba
+                    Matter.Body.applyForce(c, c.position, { x: (Math.random() - 0.5) * 0.02, y: -0.06 * c.mass });
+                }
+            });
+        }
+
         function operar(columna, valor) {
             reproducirSonido(valor > 0 ? 'add' : 'sub');
 
@@ -200,20 +206,19 @@
             if (columna === 'D') valD += valor;
             if (columna === 'C') valC += valor;
 
-            // Calcular el total cuántico para proteger de negativos absolutos
             let totalCalculado = (valC * 100) + (valD * 10) + valU;
-            if (totalCalculado < 0) {
-                valC = 0; valD = 0; valU = 0;
-            }
+            if (totalCalculado < 0) { valC = 0; valD = 0; valU = 0; }
 
             if (valor > 0) {
-                // Si es suma, dejamos que la gravedad haga lo suyo antes de agrupar
+                // Suma normal
                 crearCanicaFisica(columna, Math.abs(valor));
                 actualizarMarcador();
-                setTimeout(() => sincronizarEstadoFisico(false), 400); 
+                setTimeout(() => sincronizarEstadoFisico(false), 500); 
             } else {
-                // Si es resta, forzamos la reconstrucción inmediata para simular el prestamo
-                sincronizarEstadoFisico(true); 
+                // 🧲 EFECTO IMÁN EN LA RESTA
+                aplicarImanMagnetico(columna);
+                // Le damos 400ms para que las canicas "vuelen" hacia arriba antes de reconstruir
+                setTimeout(() => sincronizarEstadoFisico(true), 400); 
             }
         }
 
@@ -222,35 +227,34 @@
             if (total > 999) total = 999;
             if (total < 0) total = 0;
 
-            // Desempaquetado inteligente
             let nC = Math.floor(total / 100);
             let nD = Math.floor((total % 100) / 10);
             let nU = total % 10;
 
-            // Si hay un cambio estructural (desborde) o fue una resta (forzado)
             if (nC !== valC || nD !== valD || nU !== valU || forzarReconstruccion) {
                 
-                // Si ganamos una magnitud por agrupar unidades, suena la magia
                 if(nC > valC || nD > valD) reproducirSonido('magia');
 
                 valC = nC; valD = nD; valU = nU;
 
-                // Destruir universo físico actual
                 canicasCuerpos.forEach(c => Composite.remove(engine.world, c));
                 canicasCuerpos = [];
 
-                // Recrear universo matemáticamente perfecto
+                // Reconstrucción en Cascada (El offset evita que choquen al nacer)
+                let dropOffset = 0;
                 let c5 = Math.floor(valC / 5); let c1 = valC % 5;
-                for(let i=0; i<c5; i++) crearCanicaFisica('C', 5);
-                for(let i=0; i<c1; i++) crearCanicaFisica('C', 1);
+                for(let i=0; i<c5; i++) { crearCanicaFisica('C', 5, dropOffset); dropOffset += 40; }
+                for(let i=0; i<c1; i++) { crearCanicaFisica('C', 1, dropOffset); dropOffset += 30; }
 
+                dropOffset = 0;
                 let d5 = Math.floor(valD / 5); let d1 = valD % 5;
-                for(let i=0; i<d5; i++) crearCanicaFisica('D', 5);
-                for(let i=0; i<d1; i++) crearCanicaFisica('D', 1);
+                for(let i=0; i<d5; i++) { crearCanicaFisica('D', 5, dropOffset); dropOffset += 40; }
+                for(let i=0; i<d1; i++) { crearCanicaFisica('D', 1, dropOffset); dropOffset += 30; }
 
+                dropOffset = 0;
                 let u5 = Math.floor(valU / 5); let u1 = valU % 5;
-                for(let i=0; i<u5; i++) crearCanicaFisica('U', 5);
-                for(let i=0; i<u1; i++) crearCanicaFisica('U', 1);
+                for(let i=0; i<u5; i++) { crearCanicaFisica('U', 5, dropOffset); dropOffset += 40; }
+                for(let i=0; i<u1; i++) { crearCanicaFisica('U', 1, dropOffset); dropOffset += 30; }
             }
             actualizarMarcador();
         }
