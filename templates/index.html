@@ -10,8 +10,8 @@
             color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; overflow: hidden;
         }
-        h1 { margin-top: 15px; font-weight: 300; letter-spacing: 2px; color: #00E676; margin-bottom: 5px; }
-        p.sub { color: #888; margin-top: 0; font-size: 0.9em; letter-spacing: 1px;}
+        h1 { margin-top: 10px; font-weight: 300; letter-spacing: 2px; color: #00E676; margin-bottom: 5px; }
+        p.sub { color: #888; margin-top: 0; font-size: 0.9em; letter-spacing: 1px; margin-bottom: 10px;}
         
         .panel-control {
             display: flex; gap: 15px; margin-bottom: 10px; z-index: 20;
@@ -27,36 +27,38 @@
         .btn-d { color: #2979FF; border-color: #2979FF; } .btn-d:hover { background-color: #2979FF; color: #121212; }
         .btn-reset { color: #FF5252; border-color: #FF5252; } .btn-reset:hover { background-color: #FF5252; color: #121212; }
 
-        #escenario-wrapper { position: relative; width: 950px; height: 750px; }
+        /* Lienzo más alto (950px) para dar espacio a las rampas y compuertas */
+        #escenario-wrapper { position: relative; width: 950px; height: 950px; }
         #canvas-container {
             width: 100%; height: 100%; border: 1px solid #222;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; background-color: transparent;
         }
 
-        /* Displays Digitales LED - Coordenadas Calibradas */
+        /* Displays Digitales LED */
         .display-led {
             position: absolute; background: #000; border: 2px solid #333; border-radius: 5px;
             font-family: 'Courier New', Courier, monospace; font-size: 1.5em; font-weight: bold; 
             text-align: center; width: 60px; padding: 2px 0; z-index: 10;
         }
-        #led-U { left: 790px; top: 110px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
-        #led-D { left: 470px; top: 350px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
-        #led-C { left: 150px; top: 650px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
+        /* Posiciones recalibradas para la nueva topografía */
+        #led-U { left: 790px; top: 115px; color: #00E676; border-color: #00E676; box-shadow: 0 0 10px rgba(0,230,118,0.3);}
+        #led-D { left: 470px; top: 480px; color: #2979FF; border-color: #2979FF; box-shadow: 0 0 10px rgba(41,121,255,0.3);}
+        #led-C { left: 150px; top: 880px; color: #FFD700; border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3);}
         
         /* Indicadores de Servomotor */
         .servo-status {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #333; border: 1px solid #111; z-index: 10; transition: background 0.2s;
         }
-        .servo-activo { background: #FF3D00; box-shadow: 0 0 20px #FF3D00; }
+        .servo-activo { background: #00E676; box-shadow: 0 0 20px #00E676; } /* Color de éxito */
         
-        #servo-U { left: 880px; top: 125px; } 
-        #servo-D { left: 575px; top: 385px; }
+        #servo-U { left: 885px; top: 145px; } 
+        #servo-D { left: 575px; top: 530px; }
     </style>
 </head>
 <body>
     <h1>PROTOTIPO REAL: GEMELO DIGITAL</h1>
-    <p class="sub">Acústica ASMR y Rampas Trigonométricas Exactas</p>
+    <p class="sub">Clearance Calibrado, Materiales Delgados y Acústica Victoriosa</p>
     
     <div class="panel-control">
         <button class="btn-u" onclick="inyectarCanica(1)">+1 (Micro)</button>
@@ -77,7 +79,7 @@
     </div>
 
     <script>
-        // --- 🎶 SINTETIZADOR DE AUDIO ASMR (Ondas Senoidales Puras) ---
+        // --- 🎶 SINTETIZADOR DE AUDIO ASMR ---
         let audioCtx;
         function reproducirSonido(tipo) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -87,25 +89,32 @@
             let ahora = audioCtx.currentTime;
             
             if (tipo === 'drop') { 
-                // Sonido de canica de cristal pequeña (Agudo y suave)
-                osc.type = 'sine'; osc.frequency.setValueAtTime(1400, ahora); 
-                gainNode.gain.setValueAtTime(0.04, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.15);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1600, ahora); 
+                gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.15);
                 osc.start(ahora); osc.stop(ahora + 0.15);
             } else if (tipo === 'drop5') { 
-                // Sonido de Tombolocha (Marimba profunda)
-                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ahora);
-                gainNode.gain.setValueAtTime(0.08, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.2);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(700, ahora);
+                gainNode.gain.setValueAtTime(0.06, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.2);
                 osc.start(ahora); osc.stop(ahora + 0.2);
-            } else if (tipo === 'servo') { 
-                // Motor suave y tecnológico
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(200, ahora); osc.frequency.linearRampToValueAtTime(150, ahora + 0.5);
-                gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.5);
-                osc.start(ahora); osc.stop(ahora + 0.5);
+            } else if (tipo === 'victoria') { 
+                // 🎶 ARPEGIO ASMR DE VICTORIA (Do Mayor)
+                let frecuencias = [523.25, 659.25, 783.99, 1046.50]; // Notas: Do, Mi, Sol, Do agudo
+                frecuencias.forEach((freq, index) => {
+                    let oscV = audioCtx.createOscillator(); let gnV = audioCtx.createGain();
+                    oscV.connect(gnV); gnV.connect(audioCtx.destination);
+                    oscV.type = 'sine'; oscV.frequency.value = freq;
+                    
+                    let tiempo = ahora + (index * 0.08); // Se tocan en cascada rápida
+                    gnV.gain.setValueAtTime(0, tiempo);
+                    gnV.gain.linearRampToValueAtTime(0.06, tiempo + 0.02);
+                    gnV.gain.exponentialRampToValueAtTime(0.001, tiempo + 0.4);
+                    
+                    oscV.start(tiempo); oscV.stop(tiempo + 0.4);
+                });
             } else if (tipo === 'beep') { 
-                // Campanilla del láser (Campana suave)
-                osc.type = 'sine'; osc.frequency.setValueAtTime(2000, ahora); osc.frequency.exponentialRampToValueAtTime(2500, ahora + 0.1);
-                gainNode.gain.setValueAtTime(0.03, ahora); gainNode.gain.linearRampToValueAtTime(0, ahora + 0.1);
-                osc.start(ahora); osc.stop(ahora + 0.1);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(2200, ahora); 
+                gainNode.gain.setValueAtTime(0.02, ahora); gainNode.gain.exponentialRampToValueAtTime(0.001, ahora + 0.05);
+                osc.start(ahora); osc.stop(ahora + 0.05);
             }
         }
 
@@ -115,41 +124,42 @@
               Composite = Matter.Composite, Events = Matter.Events;
 
         const engine = Engine.create();
-        engine.positionIterations = 15; engine.velocityIterations = 15; // Precisión absoluta
+        engine.positionIterations = 15; engine.velocityIterations = 15; 
 
         const render = Render.create({
             element: document.getElementById('canvas-container'), engine: engine,
-            options: { width: 950, height: 750, wireframes: false, background: 'transparent' }
+            options: { width: 950, height: 950, wireframes: false, background: 'transparent' } // Lienzo ampliado
         });
 
-        // --- 📐 FUNCIONES GEOMÉTRICAS EXACTAS ---
+        // --- 📐 FUNCIONES GEOMÉTRICAS DELGADAS ---
+        // Paredes adelgazadas a 10px para diseño sutil
         const opPared = { isStatic: true, render: { fillStyle: '#444' } };
         let modulos = {}; 
 
-        // Generador de Rampas Trigonométricas Perfectas
         function crearRampa(x1, y1, x2, y2) {
-            let cx = (x1 + x2) / 2;
-            let cy = (y1 + y2) / 2;
+            let cx = (x1 + x2) / 2; let cy = (y1 + y2) / 2;
             let longitud = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
             let angulo = Math.atan2(y2 - y1, x2 - x1);
-            Composite.add(engine.world, Bodies.rectangle(cx, cy, longitud, 15, { 
+            // Rampas delgadas de 8px (antes 15px)
+            Composite.add(engine.world, Bodies.rectangle(cx, cy, longitud, 8, { 
                 isStatic: true, angle: angulo, render: { fillStyle: '#666' } 
             }));
         }
 
         function crearContenedor(id, x, y, width, height, limit, colorBase) {
-            const paredIzq = Bodies.rectangle(x - width/2, y, 15, height, opPared);
-            const paredDer = Bodies.rectangle(x + width/2, y, 15, height, opPared);
+            const paredIzq = Bodies.rectangle(x - width/2, y, 10, height, opPared);
+            const paredDer = Bodies.rectangle(x + width/2, y, 10, height, opPared);
             
-            // 🛡️ FIX BOTELLA: Embudos mucho más verticales (Math.PI/2.5) y garganta más ancha
-            const guiaIzq = Bodies.rectangle(x - width/2 - 20, y - height/2 - 40, 90, 15, { isStatic: true, angle: Math.PI/2.5, render: { fillStyle: '#555' } });
-            const guiaDer = Bodies.rectangle(x + width/2 + 20, y - height/2 - 40, 90, 15, { isStatic: true, angle: -Math.PI/2.5, render: { fillStyle: '#555' } });
+            // 🛡️ EMBIDOS AMPLIADOS: Ángulo de Math.PI/2.3 (casi vertical) y garganta más ancha
+            const guiaIzq = Bodies.rectangle(x - width/2 - 25, y - height/2 - 50, 100, 8, { isStatic: true, angle: Math.PI/2.3, render: { fillStyle: '#555' } });
+            const guiaDer = Bodies.rectangle(x + width/2 + 25, y - height/2 - 50, 100, 8, { isStatic: true, angle: -Math.PI/2.3, render: { fillStyle: '#555' } });
 
             const sensorLaser = Bodies.rectangle(x, y - height/2 + 20, width - 15, 10, { 
                 isStatic: true, isSensor: true, label: 'sensor_' + id, render: { fillStyle: 'rgba(255, 0, 0, 0.15)' } 
             });
 
-            const escotilla = Bodies.rectangle(x, y + height/2, width + 15, 20, { isStatic: true, render: { fillStyle: colorBase } });
+            // 🛡️ ESCOTILLA DELGADA (8px) Y SELLADA
+            const escotilla = Bodies.rectangle(x, y + height/2, width + 10, 8, { isStatic: true, render: { fillStyle: colorBase } });
             
             const bisagra = Constraint.create({
                 pointA: { x: x + width/2 - 5, y: y + height/2 }, bodyB: escotilla, pointB: { x: width/2 - 5, y: 0 }, 
@@ -160,16 +170,16 @@
             modulos[id] = { id, escotilla, limite: limit, conteoActual: 0, abierta: false, origX: x, origY: y + height/2 };
         }
 
-        // 📐 COORDENADAS RECALIBRADAS 
-        crearContenedor('U', 820, 80, 100, 100, 10, '#00E676'); // Ancho a 100 para que la Tombolocha pase libre
-        crearContenedor('D', 500, 320, 130, 150, 100, '#2979FF'); // Centrado a X=500
-        crearContenedor('C', 180, 620, 160, 200, 9999, '#FFD700'); // Centrado a X=180
+        // 📐 TOPOGRAFÍA PERFECTA (Clearance garantizado para que las puertas no choquen con las rampas)
+        crearContenedor('U', 820, 100, 110, 100, 10, '#00E676'); // Ancho 110. Base en Y=150. Puerta cae hasta Y=260.
+        crearContenedor('D', 500, 460, 130, 150, 100, '#2979FF'); // Base en Y=535. Puerta cae hasta Y=665.
+        crearContenedor('C', 180, 860, 160, 150, 9999, '#FFD700'); 
 
-        // 🚀 RAMPAS VECTORIALES (Punto a Punto exacto)
-        // Rampa U -> D (Inicia debajo de U, termina justo arriba del centro de D)
-        crearRampa(790, 150, 500, 220); 
-        // Rampa D -> C (Inicia debajo de D, termina justo arriba del centro de C)
-        crearRampa(470, 420, 180, 480);
+        // 🚀 RAMPAS VECTORIALES (El inicio está por debajo del rango de la puerta abierta)
+        // Inicia en Y=280 (libre de la puerta U que llega a 260) -> Termina en Y=360 (justo en el embudo D)
+        crearRampa(850, 280, 500, 360); 
+        // Inicia en Y=690 (libre de la puerta D que llega a 665) -> Termina en Y=750 (justo en el embudo C)
+        crearRampa(530, 690, 180, 750);
 
         // --- LÓGICA DE INYECCIÓN ---
         let canicas = [];
@@ -177,13 +187,12 @@
         function inyectarCanica(valor) {
             reproducirSonido(valor === 5 ? 'drop5' : 'drop');
             let color = valor === 5 ? '#FF4081' : '#00E676';
-            // 🛡️ FIX TOMBOLOCHA: Radio 10 (Diámetro 20). Cabe holgadamente en el contenedor de 100px.
-            let radio = valor === 5 ? 10 : 6; 
+            // 🛡️ TOMBOLOCHA MÁS ÁGIL: Radio 9. Cabe sobradamente en la garganta nueva.
+            let radio = valor === 5 ? 9 : 6; 
             let masa = valor === 5 ? 5 : 1; 
 
-            // Cae con mayor precisión desde el centro absoluto del contenedor U
-            let nuevaCanica = Bodies.circle(820 + (Math.random() * 10 - 5), -30, radio, { 
-                restitution: 0.1, mass: masa, friction: 0.001, frictionAir: 0.002, render: { fillStyle: color }
+            let nuevaCanica = Bodies.circle(820 + (Math.random() * 10 - 5), -20, radio, { 
+                restitution: 0.2, mass: masa, friction: 0.001, frictionAir: 0.002, render: { fillStyle: color }
             });
             nuevaCanica.valor = valor; 
             nuevaCanica.sensoresPasados = new Set();
@@ -219,7 +228,8 @@
             if (mod.abierta) return;
             mod.abierta = true;
             
-            reproducirSonido('servo');
+            reproducirSonido('victoria'); // 🎶 El arpegio de celebración suena aquí
+            
             let luzStatus = document.getElementById('servo-' + id);
             if(luzStatus) luzStatus.classList.add('servo-activo');
 
@@ -236,7 +246,7 @@
                 mod.conteoActual = 0; 
                 mod.abierta = false;
                 actualizarDisplays();
-            }, 3000); // 3 Segundos aseguran que caigan las tombolochas pesadas
+            }, 3000); 
         }
 
         // --- SENSORES LÁSER INTELIGENTES ---
